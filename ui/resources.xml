@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+    <gresource prefix="/org/gnome/vodga">
+        <file preprocess="xml-stripblanks">vodga.ui</file>
+    </gresource>
+</gresources>
