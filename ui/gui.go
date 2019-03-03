@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"Vodga/ui/gtk_deprecated"
-	"Vodga/utils"
+	"github.com/TheWeirdDev/Vodga/ui/gtk_deprecated"
+	"github.com/TheWeirdDev/Vodga/utils"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 )

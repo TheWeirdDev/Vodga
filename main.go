@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Vodga/ui"
+	"github.com/TheWeirdDev/Vodga/ui"
 	"github.com/gotk3/gotk3/gtk"
 )
 
