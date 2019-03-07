@@ -1,4 +1,4 @@
-package main
+package daemon
 
 import (
 	"errors"
@@ -13,42 +13,53 @@ import (
 )
 
 const (
-	UnixSocket = "/tmp/vodgad.sock"
-	MsgKilled  = "KILLED"
+	unixSocket = "/tmp/vodgad.sock"
+	msgKilled  = "KILLED"
 )
 
 var InstanceExists = errors.New("another vodga instance is running.\n" +
-	"Kill the process or remove the socket: " + UnixSocket)
+	"Kill the process or remove the socket: " + unixSocket)
 var (
 	quit chan bool
 	ln   net.Listener
 )
 
-func main() {
+// Check for all the requirements for starting the server
+func InitDaemon() error {
 	quit = make(chan bool, 1)
 
+	// Daemon needs root privileges to run
 	if err := checkUser(); err != nil {
-		log.Fatalf("Error: %v", err)
+		return err
 	}
 
+	// Only one instance may run at the same time
 	err := checkExistingInstance()
+	// Check all the command line arguments to decide what to do next
 	checkArgs(err)
 
 	log.Println("Starting vodga daemon")
-	ln, err = net.Listen("unix", UnixSocket)
+	ln, err = net.Listen("unix", unixSocket)
 
 	if err != nil {
-		log.Fatalf("listen error: %v", err)
+		return fmt.Errorf("listen error: %v", err)
 	}
 
-	if err := os.Chmod(UnixSocket, os.FileMode(0777)); err != nil {
-		log.Fatalf("Socket permission error: %v", err)
+	// Make the socket accessible to users other than root
+	if err := os.Chmod(unixSocket, os.FileMode(0777)); err != nil {
+		return fmt.Errorf("socket permission error: %v", err)
 	}
+	return nil
+}
 
+func StartServer() {
+
+	// Listen for OS signals and close the socket before exiting
 	go func(ln net.Listener, kill *chan bool) {
 		sigchan := make(chan os.Signal, 5)
 		signal.Notify(sigchan, os.Interrupt, syscall.SIGPIPE, syscall.SIGKILL,
 			syscall.SIGTERM, syscall.SIGQUIT)
+		// Waits for signals
 		err := <-sigchan
 		log.Printf("Server Killed by: %v", err)
 		*kill <- true
@@ -57,14 +68,18 @@ func main() {
 
 loop:
 	for {
+		// Waits for new client connection
 		conn, err := ln.Accept()
 		if err != nil {
 			select {
+			// If we write something to this channel,
+			// it means server stopped for a known reason
 			case <-quit:
 				{
 					log.Println("Server stopped")
 					break loop
 				}
+			// Otherwise the error is unknown and needs to be handled
 			default:
 				log.Printf("Accept error: %+v", err)
 				break loop
@@ -90,7 +105,7 @@ func daemonServer(c net.Conn) {
 
 func processCommand(cmd string, c net.Conn) {
 	if cmd == "STOP_SERVER" {
-		_, err := c.Write([]byte(MsgKilled))
+		_, err := c.Write([]byte(msgKilled))
 		if err != nil {
 			log.Fatal("Writing client error: ", err)
 		}
@@ -124,9 +139,12 @@ func checkArgs(err error) {
 				if err := stopExistingServer(); err != nil {
 					log.Fatalf("Error: %v", err)
 				}
+			} else if err != nil {
+				log.Fatalf("Error : %v", err)
 			} else {
 				log.Println("No existing instance found")
 			}
+			// Shouldn't exit if restart requested
 			if shouldExit {
 				os.Exit(0)
 			}
@@ -142,15 +160,11 @@ func checkArgs(err error) {
 		os.Exit(0)
 	}
 
-	//fmt.Println("command:", *wordPtr)
-	//fmt.Println("numb:", *numbPtr)
-	//fmt.Println("fork:", *boolPtr)
-	//fmt.Println("svar:", svar)
 	//fmt.Println("tail:", flag.Args())
 }
 
 func stopExistingServer() error {
-	c, err := net.Dial("unix", UnixSocket)
+	c, err := net.Dial("unix", unixSocket)
 	if err != nil {
 		log.Fatal("Dial error", err)
 	}
@@ -169,7 +183,7 @@ func stopExistingServer() error {
 		return err
 	}
 
-	if string(buf[0:n]) == MsgKilled {
+	if string(buf[0:n]) == msgKilled {
 		log.Println("Server stopped")
 		return nil
 	}
@@ -188,7 +202,7 @@ func checkUser() error {
 }
 
 func checkExistingInstance() error {
-	if _, err := os.Stat(UnixSocket); err == nil {
+	if _, err := os.Stat(unixSocket); err == nil {
 		return InstanceExists
 	} else if os.IsNotExist(err) {
 		return nil

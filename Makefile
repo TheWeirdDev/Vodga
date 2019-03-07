@@ -5,4 +5,4 @@ GOFILES=$(wildcard *.go)
 
 
 compile-daemon:
-	@GOPATH=$(GOPATH) GOBIN=$(GOBIN) go build -o d daemon/daemon.go
+	@GOPATH=$(GOPATH) GOBIN=$(GOBIN) go build -o daemon.out main_daemon.go
