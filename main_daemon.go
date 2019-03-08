@@ -8,7 +8,7 @@ import (
 func main() {
 
 	if err := daemon.InitDaemon(); err != nil {
-		log.Fatalf("[Initialization] %v", err)
+		log.Fatalf("Error: %v", err)
 	}
 
 	// Starts and waits for server to stop
