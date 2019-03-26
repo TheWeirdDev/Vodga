@@ -20,7 +20,7 @@ var InstanceExists = errors.New("another vodga instance is running.\n" +
 type CommandFunc func(net.Conn) error
 
 var (
-	quit     chan bool
+	quit     chan struct{}
 	ln       net.Listener
 	commands = map[string]CommandFunc{
 		consts.MsgStop: stopServer,
@@ -29,7 +29,7 @@ var (
 
 // Check for all the requirements for starting the server
 func InitDaemon() error {
-	quit = make(chan bool, 1)
+	quit = make(chan struct{})
 
 	// Daemon needs root privileges to run
 	if err := checkUser(); err != nil {
@@ -60,14 +60,14 @@ func InitDaemon() error {
 func StartServer() {
 
 	// Listen for OS signals and close the socket before exiting
-	go func(ln net.Listener, kill *chan bool) {
+	go func(ln net.Listener, kill *chan struct{}) {
 		sigchan := make(chan os.Signal, 5)
 		signal.Notify(sigchan, os.Interrupt, syscall.SIGPIPE, syscall.SIGKILL,
 			syscall.SIGTERM, syscall.SIGQUIT)
 		// Waits for signals
 		err := <-sigchan
 		log.Printf("Server Killed by: %v", err)
-		*kill <- true
+		close(*kill)
 		ln.Close()
 	}(ln, &quit)
 
@@ -77,18 +77,17 @@ loop:
 		conn, err := ln.Accept()
 		if err != nil {
 			select {
+
 			// If we write something to this channel,
 			// it means server stopped for a known reason
 			case <-quit:
-				{
-					log.Println("Server stopped")
-					break loop
-				}
-			// Otherwise the error is unknown and needs to be handled
+				log.Println("Server stopped")
+
+				// Otherwise the error is unknown and needs to be handled
 			default:
 				log.Printf("Accept error: %+v", err)
-				break loop
 			}
+			break loop
 		}
 		go daemonServer(conn)
 	}
@@ -100,7 +99,7 @@ func daemonServer(c net.Conn) {
 		nr, err := c.Read(buf)
 
 		// Returns EOF when disconnected
-		if err == io.EOF{
+		if err == io.EOF {
 			log.Println("Client disconnected")
 			break
 		} else if err != nil {
@@ -120,7 +119,7 @@ func stopServer(c net.Conn) error {
 	if err != nil {
 		return err
 	}
-	quit <- true
+	close(quit)
 	return ln.Close()
 }
 
