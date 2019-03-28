@@ -30,8 +30,7 @@ func main() {
 
 	log.Println("Starting vodga daemon")
 
-	server := daemon.GetDaemon()
-
+	server := daemon.NewDaemon()
 	// Starts and waits for server to stop
 	server.StartServer()
 }

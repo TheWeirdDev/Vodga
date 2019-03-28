@@ -19,29 +19,22 @@ type Daemon struct {
 	mux   sync.Mutex
 }
 
-var instance *Daemon
-var once sync.Once
+func NewDaemon() *Daemon {
+	instance := &Daemon{}
+	instance.quit = make(chan struct{})
 
-func GetDaemon() *Daemon {
-	once.Do(func() {
-		instance = &Daemon{}
-		instance.quit = make(chan struct{})
+	ln, err := net.Listen("unix", consts.UnixSocket)
+	if err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
+	instance.ln = ln
 
-		ln , err := net.Listen("unix", consts.UnixSocket)
-		if err != nil {
-			log.Fatalf("Server error: %v", err)
-		}
-		instance.ln = ln
-
-		// Make the socket accessible to users other than root
-		if err := os.Chmod(consts.UnixSocket, os.FileMode(0777)); err != nil {
-			log.Fatalf("Failed to set socket permissions: %v", err)
-		}
-
-	})
+	// Make the socket accessible to users other than root
+	if err := os.Chmod(consts.UnixSocket, os.FileMode(0777)); err != nil {
+		log.Fatalf("Failed to set socket permissions: %v", err)
+	}
 	return instance
 }
-
 
 func (d *Daemon) StartServer() {
 
