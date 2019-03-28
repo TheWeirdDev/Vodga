@@ -3,6 +3,7 @@ package ui
 import (
 	"github.com/TheWeirdDev/Vodga/ui/gtk_deprecated"
 	"github.com/TheWeirdDev/Vodga/utils"
+	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 )
@@ -18,8 +19,6 @@ type MainWindow struct {
 var mainWindow = &MainWindow{}
 var initDone = false
 
-const uiFilePath = "/home/alireza/go/src/Vodga/ui/vodga.ui"
-
 func StartGui() {
 	if initDone {
 		log.Fatalf("Error: GUI is already Initialized")
@@ -31,7 +30,7 @@ func StartGui() {
 		showMainGUI()
 	}()
 
-	builder, err := gtk.BuilderNewFromFile(uiFilePath)
+	builder, err := gtk.BuilderNewFromFile(consts.UIFilePath)
 	if err != nil {
 		log.Fatalf("Error: Can not initialize the ui builer")
 	}

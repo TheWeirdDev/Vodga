@@ -1,63 +1,49 @@
 package daemon
 
 import (
-	"errors"
-	"flag"
-	"fmt"
 	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"io"
 	"log"
 	"net"
 	"os"
 	"os/signal"
-	"os/user"
+	"strings"
+	"sync"
 	"syscall"
 )
 
-var InstanceExists = errors.New("another vodga instance is running.\n" +
-	"Kill the process or remove the socket: " + consts.UnixSocket)
-
-type CommandFunc func(net.Conn) error
-
-var (
-	quit     chan struct{}
-	ln       net.Listener
-	commands = map[string]CommandFunc{
-		consts.MsgStop: stopServer,
-	}
-)
-
-// Check for all the requirements for starting the server
-func InitDaemon() error {
-	quit = make(chan struct{})
-
-	// Daemon needs root privileges to run
-	if err := checkUser(); err != nil {
-		return err
-	}
-
-	// Only one instance may run at the same time
-	err := checkExistingInstance()
-	// Check all the command line arguments to decide what to do next
-	if err := checkArgs(err); err != nil {
-		return err
-	}
-
-	log.Println("Starting vodga daemon")
-	ln, err = net.Listen("unix", consts.UnixSocket)
-
-	if err != nil {
-		return err
-	}
-
-	// Make the socket accessible to users other than root
-	if err := os.Chmod(consts.UnixSocket, os.FileMode(0777)); err != nil {
-		return err
-	}
-	return nil
+type Daemon struct {
+	quit  chan struct{}
+	ln    net.Listener
+	conns []net.Conn
+	mux   sync.Mutex
 }
 
-func StartServer() {
+var instance *Daemon
+var once sync.Once
+
+func GetDaemon() *Daemon {
+	once.Do(func() {
+		instance = &Daemon{}
+		instance.quit = make(chan struct{})
+
+		ln , err := net.Listen("unix", consts.UnixSocket)
+		if err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
+		instance.ln = ln
+
+		// Make the socket accessible to users other than root
+		if err := os.Chmod(consts.UnixSocket, os.FileMode(0777)); err != nil {
+			log.Fatalf("Failed to set socket permissions: %v", err)
+		}
+
+	})
+	return instance
+}
+
+
+func (d *Daemon) StartServer() {
 
 	// Listen for OS signals and close the socket before exiting
 	go func(ln net.Listener, kill *chan struct{}) {
@@ -69,18 +55,18 @@ func StartServer() {
 		log.Printf("Server Killed by: %v", err)
 		close(*kill)
 		ln.Close()
-	}(ln, &quit)
+	}(d.ln, &d.quit)
 
 loop:
 	for {
 		// Waits for new client connection
-		conn, err := ln.Accept()
+		conn, err := d.ln.Accept()
 		if err != nil {
 			select {
 
 			// If we write something to this channel,
 			// it means server stopped for a known reason
-			case <-quit:
+			case <-d.quit:
 				log.Println("Server stopped")
 
 				// Otherwise the error is unknown and needs to be handled
@@ -89,143 +75,67 @@ loop:
 			}
 			break loop
 		}
-		go daemonServer(conn)
+
+		d.conns = append(d.conns, conn)
+		go d.daemonServer(conn, len(d.conns)-1)
 	}
 }
 
-func daemonServer(c net.Conn) {
+func (d *Daemon) daemonServer(c net.Conn, id int) {
+	defer func(c *net.Conn) {
+		(*c).Close()
+		d.conns[id] = nil
+	}(&c)
+
+	log.Printf("Client #%d connected", id)
 	for {
 		buf := make([]byte, 1024)
 		nr, err := c.Read(buf)
 
 		// Returns EOF when disconnected
 		if err == io.EOF {
-			log.Println("Client disconnected")
+			log.Printf("Client #%d disconnected", id)
 			break
 		} else if err != nil {
 			log.Fatalf("Server error: %v", err)
 		}
 
-		cmd := string(buf[0:nr])
-		log.Println("Server got:", cmd)
-		if err := processCommand(cmd, c); err != nil {
+		cmd := strings.TrimSpace(string(buf[0:nr]))
+		log.Printf("Server got(#%d): %s\n", id, cmd)
+		if err := d.processCommand(cmd, c); err != nil {
 			log.Fatalf("Server error: %v", err)
 		}
 	}
 }
 
-func stopServer(c net.Conn) error {
+func (d *Daemon) stopServer(c net.Conn) error {
 	_, err := c.Write([]byte(consts.MsgKilled))
 	if err != nil {
 		return err
 	}
-	close(quit)
-	return ln.Close()
+	close(d.quit)
+	return d.ln.Close()
 }
 
-func processCommand(cmd string, c net.Conn) error {
-	fn, ok := commands[cmd]
-	if !ok {
-		log.Printf("Got unknown command: %v\n", cmd)
-		_, err := c.Write([]byte("Unknown command"))
-		if err != nil {
-			return err
-		}
+func (d *Daemon) processCommand(cmd string, c net.Conn) error {
+	d.mux.Lock()
+	defer d.mux.Unlock()
+
+	fields := strings.Fields(cmd)
+	if len(fields) < 1 {
 		return nil
 	}
-	return fn(c)
-}
-
-func checkArgs(err error) error {
-
-	command := flag.String("command", "start", "start or stop the daemon")
-	//numbPtr := flag.Int("numb", 42, "an int")
-	//boolPtr := flag.Bool("fork", false, "a bool")
-
-	//var svar string
-	//flag.StringVar(&svar, "svar", "bar", "a string var")
-
-	flag.Parse()
-
-	shouldExit := true
-	switch *command {
-
-	case "restart":
-		{
-			shouldExit = false
-		}
-		fallthrough
-	case "stop":
-		{
-			if err == InstanceExists {
-				if err := stopExistingServer(); err != nil {
-					return err
-				}
-			} else if err != nil {
-				return err
-			} else {
-				log.Println("No existing instance found")
-			}
-			// Shouldn't exit if restart requested
-			if shouldExit {
-				os.Exit(0)
-			}
-		}
-
-	case "start":
-		if err != nil {
-			return err
-		}
+	cmd = fields[0]
+	switch cmd {
+	case consts.MsgStop:
+		return d.stopServer(c)
 
 	default:
-		return fmt.Errorf("unknown command \"%s\"", *command)
-	}
-	return nil
-	//fmt.Println("tail:", flag.Args())
-}
-
-func stopExistingServer() error {
-	c, err := net.Dial("unix", consts.UnixSocket)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
-	_, err = c.Write([]byte(consts.MsgStop))
-	if err != nil {
-		return err
-	}
-
-	buf := make([]byte, 1024)
-	n, err := c.Read(buf[:])
-	if err != nil {
-		return err
-	}
-
-	if string(buf[0:n]) == consts.MsgKilled {
-		log.Println("Server stopped")
+		log.Printf("Unknown command: %v\n", cmd)
+		_, err := c.Write([]byte(consts.UnknownCmd))
+		if err != nil {
+			return err
+		}
 		return nil
-	}
-	return errors.New("can't stop the server")
-}
-
-func checkUser() error {
-	theUser, err := user.Current()
-	if err != nil {
-		return errors.New("failed to get user details")
-	}
-	if theUser.Uid != "0" {
-		return errors.New("the Vodga daemon needs root privileges to run")
-	}
-	return err
-}
-
-func checkExistingInstance() error {
-	if _, err := os.Stat(consts.UnixSocket); err == nil {
-		return InstanceExists
-	} else if os.IsNotExist(err) {
-		return nil
-	} else {
-		return err
 	}
 }
