@@ -1,5 +1,5 @@
 GOBASE=$(shell pwd)
-GOPATH=$(GOBASE)/vendor:$(GOBASE):/home/alireza/code/golang # You can remove or change the path after last colon.
+#GOPATH=$(GOBASE)/vendor:$(GOBASE):/home/alireza/code/golang # You can remove or change the path after last colon.
 GOBIN=$(GOBASE)/bin
 GOFILES=$(wildcard *.go)
 

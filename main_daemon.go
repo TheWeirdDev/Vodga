@@ -1,15 +1,16 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
-	"github.com/TheWeirdDev/Vodga/daemon"
-	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"log"
 	"net"
 	"os"
 	"os/user"
-	"errors"
+
+	"github.com/TheWeirdDev/Vodga/daemon"
+	"github.com/TheWeirdDev/Vodga/utils/consts"
 )
 
 var InstanceExists = errors.New("another vodga instance is running.\n" +
@@ -18,7 +19,7 @@ var InstanceExists = errors.New("another vodga instance is running.\n" +
 func main() {
 	// Daemon needs root privileges to run
 	if err := checkUser(); err != nil {
-		log.Fatalf("Failed to start: %d", err)
+		log.Fatalf("Failed to start: %v", err)
 	}
 
 	// Only one instance may run at the same time
@@ -34,7 +35,6 @@ func main() {
 	// Starts and waits for server to stop
 	server.StartServer()
 }
-
 
 func checkArgs(err error) error {
 
