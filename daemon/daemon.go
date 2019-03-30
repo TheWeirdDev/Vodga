@@ -149,12 +149,21 @@ func (d *Daemon) startOpenVPN(config string, c net.Conn) {
 	err = cmd.Wait()
 	if err != nil {
 		d.openvpn = nil
-		log.Println("OpenVPN Closed")
+		log.Println("OpenVPN closed unexpectedly")
 		_, err := c.Write([]byte(consts.MsgDisconnected))
 		if err != nil {
 			log.Println("Error: can't write to connection")
 		}
+		return
 	}
+
+	d.openvpn = nil
+	log.Println("OpenVPN Closed")
+	_, err = c.Write([]byte(consts.MsgDisconnected))
+	if err != nil {
+		log.Println("Error: can't write to connection")
+	}
+
 }
 
 func (d *Daemon) processCommand(cmd string, c net.Conn) error {
@@ -175,7 +184,12 @@ func (d *Daemon) processCommand(cmd string, c net.Conn) error {
 			_, err := c.Write([]byte(fmt.Sprintf("%s %s", consts.MsgError, err.Error())))
 			return err
 		}
-		go d.startOpenVPN(fields[1], c)
+		if d.openvpn == nil {
+			go d.startOpenVPN(fields[1], c)
+		} else {
+			_, err := c.Write([]byte(fmt.Sprintf("%s %s", consts.MsgError, "OpenVPN is already running")))
+			return err
+		}
 		return nil
 
 	case consts.MsgDisconnect:
