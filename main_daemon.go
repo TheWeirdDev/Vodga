@@ -29,7 +29,7 @@ func main() {
 		log.Fatalf("Error: %v", err)
 	}
 
-	log.Println("Starting vodga daemon")
+	log.Println("Vodga daemon is running")
 
 	server := daemon.NewDaemon()
 	// Starts and waits for server to stop

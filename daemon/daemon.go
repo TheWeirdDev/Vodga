@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type Daemon struct {
@@ -116,7 +117,8 @@ func (d *Daemon) stopServer(c net.Conn) error {
 }
 
 func (d *Daemon) startOpenVPN(config string, c net.Conn) {
-	cmd := exec.Command("openvpn", "--config", config)
+	cmd := exec.Command("openvpn", "--config", config,
+		"--management", consts.MgmtSocket, "unix", "--management-query-passwords")
 
 	// create a pipe for the output of the script
 	cmdReader, err := cmd.StdoutPipe()
@@ -129,9 +131,11 @@ func (d *Daemon) startOpenVPN(config string, c net.Conn) {
 	}
 
 	scanner := bufio.NewScanner(cmdReader)
+	//TODO: scanner.Split()
+
 	go func() {
 		for scanner.Scan() {
-			fmt.Printf("\t > %s\n", scanner.Text())
+			c.Write([]byte("LOG " + scanner.Text() + "\n"))
 		}
 	}()
 
@@ -143,7 +147,7 @@ func (d *Daemon) startOpenVPN(config string, c net.Conn) {
 		}
 		return
 	}
-
+	go d.connectMgmt()
 	d.openvpn = cmd
 
 	err = cmd.Wait()
@@ -212,4 +216,30 @@ func (d *Daemon) processCommand(cmd string, c net.Conn) error {
 		}
 		return nil
 	}
+}
+
+func (d *Daemon) connectMgmt() {
+	time.Sleep(time.Second)
+	c, err := net.Dial("unix", consts.MgmtSocket)
+	if err != nil {
+		log.Println("Can't connect to management socket")
+		return
+	}
+	log.Println("Connected to management socket")
+	defer c.Close()
+	//_, err = c.Write([]byte("bytecount 1\n"))
+	_, err = c.Write([]byte("state on\n"))
+	if err != nil {
+		log.Println("ERROR")
+		return
+	}
+	buf := make([]byte, 1024)
+	for {
+		n, err := c.Read(buf[:])
+		if err != nil {
+			return
+		}
+		log.Println("$$$ GOT: ", string(buf[0:n]))
+	}
+
 }
