@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/TheWeirdDev/Vodga/utils"
 	"github.com/TheWeirdDev/Vodga/utils/consts"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -87,24 +86,18 @@ func (d *Daemon) daemonServer(c net.Conn, id int) {
 	}(&c)
 
 	log.Printf("Client #%d connected", id)
-	for {
-		buf := make([]byte, 1024)
-		nr, err := c.Read(buf)
-
-		// Returns EOF when disconnected
-		if err == io.EOF {
-			log.Printf("Client #%d disconnected", id)
-			break
-		} else if err != nil {
-			log.Fatalf("Server error: %v", err)
-		}
-
-		cmd := strings.TrimSpace(string(buf[0:nr]))
-		log.Printf("Server got(#%d): %s\n", id, cmd)
-		if err := d.processCommand(cmd, c); err != nil {
+	scanner := bufio.NewScanner(c)
+	for scanner.Scan() {
+		text := strings.TrimSpace(scanner.Text())
+		log.Printf("Server got(#%d): %s\n", id, text)
+		if err := d.processCommand(text, c); err != nil {
 			log.Printf("Error: %v", err)
 		}
 	}
+	if err := scanner.Err(); err != nil{
+		log.Printf("Server error: %v", err)
+	}
+	log.Printf("Client #%d disconnected", id)
 }
 
 func (d *Daemon) stopServer(c net.Conn) error {
@@ -233,13 +226,11 @@ func (d *Daemon) connectMgmt() {
 		log.Println("ERROR")
 		return
 	}
-	buf := make([]byte, 1024)
-	for {
-		n, err := c.Read(buf[:])
-		if err != nil {
-			return
-		}
-		log.Println("$$$ GOT: ", string(buf[0:n]))
+
+	scanner := bufio.NewScanner(c)
+	for scanner.Scan() {
+		log.Println("$$$ GOT: ", scanner.Text())
 	}
+
 
 }
