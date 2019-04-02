@@ -3,6 +3,7 @@ package utils
 import
 (
 	"fmt"
+	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
@@ -23,4 +24,8 @@ func EnsureEnoughArguments(args []string, count int) error {
 		return fmt.Errorf("command %q takes %d argument(s) but %d were given", args[0], count, c)
 	}
 	return nil
+}
+
+func ErrorMsg(msg string) string {
+	return fmt.Sprintf("%s %s\n", consts.MsgError, msg)
 }

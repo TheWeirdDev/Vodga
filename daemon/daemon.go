@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/TheWeirdDev/Vodga/utils"
 	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"log"
@@ -91,13 +90,13 @@ func (d *Daemon) daemonServer(c net.Conn, id int) {
 		text := strings.TrimSpace(scanner.Text())
 		log.Printf("Server got(#%d): %s\n", id, text)
 		if err := d.processCommand(text, c); err != nil {
-			log.Printf("Error: %v", err)
+			log.Printf("Error: %v\n", err)
 		}
 	}
 	if err := scanner.Err(); err != nil{
-		log.Printf("Server error: %v", err)
+		log.Printf("Server error: %v\n", err)
 	}
-	log.Printf("Client #%d disconnected", id)
+	log.Printf("Client #%d disconnected\n", id)
 }
 
 func (d *Daemon) stopServer(c net.Conn) error {
@@ -116,7 +115,7 @@ func (d *Daemon) startOpenVPN(config string, c net.Conn) {
 	// create a pipe for the output of the script
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		_, err := c.Write([]byte(fmt.Sprintf("%s %s", consts.MsgError, "Can't open StdoutPipe for OpenVPN")))
+		_, err := c.Write([]byte(utils.ErrorMsg("Can't open StdoutPipe for OpenVPN")))
 		if err != nil {
 			log.Println("Error: can't write to connection")
 		}
@@ -134,13 +133,13 @@ func (d *Daemon) startOpenVPN(config string, c net.Conn) {
 
 	err = cmd.Start()
 	if err != nil {
-		_, err := c.Write([]byte(fmt.Sprintf("%s %s", consts.MsgError, "Can't start OpenVPN")))
+		_, err := c.Write([]byte(utils.ErrorMsg("Can't start OpenVPN")))
 		if err != nil {
 			log.Println("Error: can't write to connection")
 		}
 		return
 	}
-	go d.connectMgmt()
+	go d.connectToMgmt()
 	d.openvpn = cmd
 
 	err = cmd.Wait()
@@ -177,27 +176,27 @@ func (d *Daemon) processCommand(cmd string, c net.Conn) error {
 		return d.stopServer(c)
 
 	case consts.MsgConnect:
-		if err := utils.EnsureEnoughArguments(fields, 1); err != nil {
-			_, err := c.Write([]byte(fmt.Sprintf("%s %s", consts.MsgError, err.Error())))
+		if err := utils.EnsureEnoughArguments(fields, 2); err != nil {
+			_, err := c.Write([]byte(utils.ErrorMsg(err.Error())))
 			return err
 		}
 		if d.openvpn == nil {
 			go d.startOpenVPN(fields[1], c)
 		} else {
-			_, err := c.Write([]byte(fmt.Sprintf("%s %s", consts.MsgError, "OpenVPN is already running")))
+			_, err := c.Write([]byte(utils.ErrorMsg("OpenVPN is already running")))
 			return err
 		}
 		return nil
 
 	case consts.MsgDisconnect:
 		if err := utils.EnsureEnoughArguments(fields, 0); err != nil {
-			_, err := c.Write([]byte(fmt.Sprintf("%s %s", consts.MsgError, err.Error())))
+			_, err := c.Write([]byte(utils.ErrorMsg(err.Error())))
 			return err
 		}
 		if d.openvpn != nil {
 			return d.openvpn.Process.Signal(os.Interrupt)
 		} else {
-			_, err := c.Write([]byte(fmt.Sprintf("%s %s", consts.MsgError, "OpenVPN is not running")))
+			_, err := c.Write([]byte(utils.ErrorMsg("OpenVPN is not running")))
 			return err
 		}
 
@@ -211,7 +210,7 @@ func (d *Daemon) processCommand(cmd string, c net.Conn) error {
 	}
 }
 
-func (d *Daemon) connectMgmt() {
+func (d *Daemon) connectToMgmt() {
 	time.Sleep(time.Second)
 	c, err := net.Dial("unix", consts.MgmtSocket)
 	if err != nil {
@@ -231,6 +230,7 @@ func (d *Daemon) connectMgmt() {
 	for scanner.Scan() {
 		log.Println("$$$ GOT: ", scanner.Text())
 	}
-
-
+	if err := scanner.Err(); err != nil{
+		log.Printf("Management error: %v\n", err)
+	}
 }
