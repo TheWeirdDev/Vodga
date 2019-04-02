@@ -4,13 +4,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/TheWeirdDev/Vodga/daemon"
+	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"log"
 	"net"
 	"os"
 	"os/user"
-
-	"github.com/TheWeirdDev/Vodga/daemon"
-	"github.com/TheWeirdDev/Vodga/utils/consts"
 )
 
 var InstanceExists = errors.New("another vodga instance is running.\n" +

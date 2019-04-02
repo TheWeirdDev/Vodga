@@ -1,12 +1,12 @@
 package utils
 
-import
-(
+import (
 	"fmt"
 	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
+	"strings"
 )
 
 
@@ -18,14 +18,20 @@ func GetWidget(builder *gtk.Builder, id string) *glib.IObject {
 	return &widget
 }
 
-func EnsureEnoughArguments(args []string, count int) error {
-	c := len(args) - 1
-	if c != count {
-		return fmt.Errorf("command %q takes %d argument(s) but %d were given", args[0], count, c)
-	}
-	return nil
+func ErrorMsg(msg string) string {
+	return fmt.Sprintf("%s %s", consts.MsgError, msg)
 }
 
-func ErrorMsg(msg string) string {
-	return fmt.Sprintf("%s %s\n", consts.MsgError, msg)
+func OpenvpnEscape(unescaped string) string{
+	escapedString := strings.ReplaceAll(unescaped, "\\", "\\\\")
+	escapedString = strings.ReplaceAll(unescaped,"\"", "\\\"")
+	escapedString = strings.ReplaceAll(unescaped,"\n", "\\n")
+
+	if escapedString == unescaped && !strings.Contains(escapedString," ") &&
+		!strings.Contains(escapedString,"#") && !strings.Contains(escapedString,";") &&
+		!(escapedString == "") {
+		return unescaped
+	} else{
+		return "\"" + escapedString + "\""
+	}
 }
