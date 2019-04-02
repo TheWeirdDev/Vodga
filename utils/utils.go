@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"fmt"
-	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
@@ -16,10 +14,6 @@ func GetWidget(builder *gtk.Builder, id string) *glib.IObject {
 		log.Fatalf("Error: Can't find widget: %q", id)
 	}
 	return &widget
-}
-
-func ErrorMsg(msg string) string {
-	return fmt.Sprintf("%s %s", consts.MsgError, msg)
 }
 
 func OpenvpnEscape(unescaped string) string{

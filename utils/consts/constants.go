@@ -9,6 +9,7 @@ const (
 	MsgStop         = "STOP_SERVER"
 	MsgConnect      = "CONNECT"
 	MsgError        = "ERROR"
+	MsgLog          = "LOG"
 	MsgDisconnect   = "DISCONNECT"
 	MsgDisconnected = "DISCONNECTED"
 )
