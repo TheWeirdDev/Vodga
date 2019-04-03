@@ -114,7 +114,8 @@ func (d *Daemon) sendMessage(msg *messages.Message, c net.Conn) {
 		log.Printf("Error: %v\n", err)
 		return
 	}
-	_, err = c.Write([]byte(string(data) + "\n"))
+	data = append(data, '\n')
+	_, err = c.Write(data)
 	if err != nil {
 		log.Println("Error: can't write to connection")
 	}
@@ -123,13 +124,25 @@ func (d *Daemon) sendMessage(msg *messages.Message, c net.Conn) {
 func (d *Daemon) stopServer(c net.Conn) {
 	close(d.quit)
 	if err := d.ln.Close(); err != nil {
-		log.Printf("Server return an error: %v\n", err)
+		log.Fatalf("Server returned an error: %v\n", err)
 	}
 	d.sendMessage(messages.SimpleMsg(consts.MsgKilled), c)
 }
 
 func (d *Daemon) startOpenVPN(msg *messages.Message, c net.Conn) {
 	config, ok := msg.Parameters["config"]
+	if !ok {
+		d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
+		log.Println("Error: no config was given")
+		return
+	}
+	username, ok := msg.Parameters["username"]
+	if !ok {
+		d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
+		log.Println("Error: no config was given")
+		return
+	}
+	password, ok := msg.Parameters["password"]
 	if !ok {
 		d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
 		log.Println("Error: no config was given")
@@ -185,7 +198,7 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 		d.stopServer(c)
 
 	case consts.MsgConnect:
-		if err := msg.EnsureEnoughArguments(2); err != nil {
+		if err := msg.EnsureEnoughArguments(3); err != nil {
 			d.sendMessage(messages.ErrorMsg(err.Error()), c)
 			return
 		}
@@ -221,9 +234,9 @@ func (d *Daemon) connectToMgmt() {
 	time.Sleep(time.Second)
 	c, err := net.Dial("unix", consts.MgmtSocket)
 	if err != nil {
-		log.Println("Can't connect to management socket")
-		return
+		log.Fatalf("Can't connect to management socket\n")
 	}
+
 	log.Println("Connected to management socket")
 	defer c.Close()
 	//"bytecount 1\n"
@@ -233,7 +246,16 @@ func (d *Daemon) connectToMgmt() {
 
 	scanner := bufio.NewScanner(c)
 	for scanner.Scan() {
-		log.Println("$$$ GOT: ", scanner.Text())
+		txt := scanner.Text()
+		log.Println("$$$ GOT: ", txt)
+		if len(txt) > 0 && txt[0] == '>' {
+			switch txt[1:strings.IndexRune(txt,':')] {
+			case "PASSWORD":
+				if _, err := c.Write([]byte("state on\n")); err!= nil{
+					log.Fatalf("Error: can't write to openvpn management\n")
+				}
+			}
+		}
 	}
 	if err := scanner.Err(); err != nil{
 		log.Printf("Management error: %v\n", err)
