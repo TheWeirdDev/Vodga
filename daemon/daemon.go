@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"github.com/TheWeirdDev/Vodga/utils/messages"
 	"log"
@@ -193,7 +194,7 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 			d.sendMessage(messages.ErrorMsg(err.Error()), c)
 			return
 		}
-		if !d.openvpn.isRunning(){
+		if !d.openvpn.isRunning() {
 			d.sendMessage(messages.ErrorMsg("OpenVPN is not running"), c)
 			return
 		}
@@ -209,10 +210,22 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 }
 
 func (d *Daemon) connectToMgmt() {
-	time.Sleep(time.Second)
-	c, err := net.Dial("unix", consts.MgmtSocket)
-	if err != nil {
-		log.Fatalf("Can't connect to management socket\n")
+	tries := 10
+	var c net.Conn
+
+	for {
+		var err error
+		c, err = net.Dial("unix", consts.MgmtSocket)
+		if err != nil {
+			time.Sleep(300 * time.Millisecond)
+			if tries == 0 {
+				log.Fatalf("Can't connect to management socket\n")
+			}
+			tries--
+		} else {
+			log.Println("Connected to mgmt socket")
+			break
+		}
 	}
 
 	log.Println("Connected to management socket")
@@ -225,18 +238,9 @@ func (d *Daemon) connectToMgmt() {
 	scanner := bufio.NewScanner(c)
 	for scanner.Scan() {
 		txt := scanner.Text()
+		//TODO: Remove all debug lines after it's done
 		log.Println("$$$ GOT: ", txt)
-		if len(txt) > 0 && txt[0] == '>' {
-			switch txt[1:strings.IndexRune(txt, ':')] {
-			case "PASSWORD":
-				userpass := "username \"Auth\" " + d.openvpn.creds.username +
-					"\n password \"Auth\" " + d.openvpn.creds.password + "\n"
-
-				if _, err := c.Write([]byte(userpass)); err != nil {
-					log.Fatalf("Error: can't write to openvpn management\n")
-				}
-			}
-		}
+		d.processMgmtCommand(txt, c)
 	}
 	if err := scanner.Err(); err != nil {
 		log.Printf("Management error: %v\n", err)
@@ -259,7 +263,6 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 		case consts.AuthNoAuth:
 			d.openvpn.config = config
 			d.openvpn.creds = credentials{auth: NO_AUTH}
-			return nil
 		case consts.AuthUserPass:
 			username, ok := msg.Parameters["username"]
 			if !ok {
@@ -273,23 +276,39 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 			}
 			d.openvpn.config = config
 			d.openvpn.creds = credentials{auth: USER_PASS, username: username, password: password}
-			return nil
-		case consts.AuthPrivateKey:
-			pkey, ok := msg.Parameters["privateKey"]
-			if !ok {
-				d.sendMessage(messages.ErrorMsg("PrivateKey is needed to start openvpn"), c)
-				return errors.New("no config was given")
-			}
-			d.openvpn.config = config
-			d.openvpn.creds = credentials{auth: PRIVATE_KEY, privateKey: pkey}
-			return nil
 		default:
 			d.sendMessage(messages.ErrorMsg("Unknown auth type"), c)
 			return errors.New("unknown auth type")
 		}
-
 	} else {
 		d.sendMessage(messages.ErrorMsg("OpenVPN is already running"), c)
-		return nil
 	}
+	return nil
+}
+
+func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
+	authTemplate := `username "Auth" %s
+					 password "Auth" %s
+					 `
+	if len(cmd) < 1 && cmd[0] != '>' {
+		return
+	}
+	colonIndex := strings.IndexRune(cmd, ':')
+
+	switch cmd[1:colonIndex] {
+	case "PASSWORD":
+		errstr := "Verification Failed"
+		if strings.Contains(cmd, errstr){
+			log.Println("Invalid credentials")
+			//d.sendMessage(messages.ErrorMsg(errstr, ))
+			return
+		}
+		userpass := fmt.Sprintf(authTemplate,
+			d.openvpn.creds.username, d.openvpn.creds.password)
+
+		if _, err := c.Write([]byte(userpass)); err != nil {
+			log.Fatalf("Error: can't write to openvpn management\n")
+		}
+	}
+
 }

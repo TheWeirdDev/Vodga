@@ -10,14 +10,12 @@ type Auth int
 const (
 	NO_AUTH Auth = iota
 	USER_PASS
-	PRIVATE_KEY
 )
 
 type credentials struct {
 	auth       Auth
 	username   string
 	password   string
-	privateKey string
 }
 
 type Openvpn struct {

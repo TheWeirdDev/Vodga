@@ -14,5 +14,4 @@ const (
 	MsgDisconnected = "DISCONNECTED"
 	AuthNoAuth      = "NO_AUTH"
 	AuthUserPass    = "AUTH_USER_PASS"
-	AuthPrivateKey  = "AUTH_PRIVATE_KEY"
 )
