@@ -3,6 +3,7 @@ package daemon
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"github.com/TheWeirdDev/Vodga/utils/messages"
 	"log"
@@ -21,12 +22,13 @@ type Daemon struct {
 	ln      net.Listener
 	conns   []net.Conn
 	mux     sync.Mutex
-	openvpn *exec.Cmd
+	openvpn Openvpn
 }
 
 func NewDaemon() *Daemon {
 	instance := &Daemon{}
 	instance.quit = make(chan struct{})
+	instance.openvpn = Openvpn{connected: false, bytesIn: 0, bytesOut: 0}
 
 	ln, err := net.Listen("unix", consts.UnixSocket)
 	if err != nil {
@@ -102,7 +104,7 @@ func (d *Daemon) daemonServer(c net.Conn, id int) {
 		}
 		d.processMessage(msg, c)
 	}
-	if err := scanner.Err(); err != nil{
+	if err := scanner.Err(); err != nil {
 		log.Printf("Server error: %v\n", err)
 	}
 	log.Printf("Client #%d disconnected\n", id)
@@ -129,26 +131,8 @@ func (d *Daemon) stopServer(c net.Conn) {
 	d.sendMessage(messages.SimpleMsg(consts.MsgKilled), c)
 }
 
-func (d *Daemon) startOpenVPN(msg *messages.Message, c net.Conn) {
-	config, ok := msg.Parameters["config"]
-	if !ok {
-		d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
-		log.Println("Error: no config was given")
-		return
-	}
-	username, ok := msg.Parameters["username"]
-	if !ok {
-		d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
-		log.Println("Error: no config was given")
-		return
-	}
-	password, ok := msg.Parameters["password"]
-	if !ok {
-		d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
-		log.Println("Error: no config was given")
-		return
-	}
-	cmd := exec.Command("openvpn", "--config", config,
+func (d *Daemon) startOpenVPN(c net.Conn) {
+	cmd := exec.Command("openvpn", "--config", d.openvpn.config,
 		"--management", consts.MgmtSocket, "unix", "--management-query-passwords")
 
 	// create a pipe for the output of the script
@@ -173,17 +157,17 @@ func (d *Daemon) startOpenVPN(msg *messages.Message, c net.Conn) {
 		return
 	}
 	go d.connectToMgmt()
-	d.openvpn = cmd
+	d.openvpn.process = cmd
 
 	err = cmd.Wait()
 	if err != nil {
-		d.openvpn = nil
+		d.openvpn.process = nil
 		log.Println("OpenVPN closed unexpectedly")
 		d.sendMessage(messages.SimpleMsg(consts.MsgDisconnected), c)
 		return
 	}
 
-	d.openvpn = nil
+	d.openvpn.process = nil
 	log.Println("OpenVPN Closed")
 	d.sendMessage(messages.SimpleMsg(consts.MsgDisconnected), c)
 
@@ -198,30 +182,24 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 		d.stopServer(c)
 
 	case consts.MsgConnect:
-		if err := msg.EnsureEnoughArguments(3); err != nil {
-			d.sendMessage(messages.ErrorMsg(err.Error()), c)
+		if err := d.prepareOpenvpn(msg, c); err != nil {
+			log.Printf("Error: %v\n", err)
 			return
 		}
-		if d.openvpn == nil {
-			go d.startOpenVPN(msg, c)
-		} else {
-			d.sendMessage(messages.ErrorMsg("OpenVPN is already running"), c)
-			return
-		}
-		return
+		go d.startOpenVPN(c)
 
 	case consts.MsgDisconnect:
 		if err := msg.EnsureEnoughArguments(0); err != nil {
 			d.sendMessage(messages.ErrorMsg(err.Error()), c)
 			return
 		}
-		if d.openvpn != nil {
-			if err := d.openvpn.Process.Signal(os.Interrupt); err != nil {
-				log.Println("Can't close openvpn")
-				d.sendMessage(messages.ErrorMsg("Can't close openvpn"), c)
-			}
-		} else {
+		if !d.openvpn.isRunning(){
 			d.sendMessage(messages.ErrorMsg("OpenVPN is not running"), c)
+			return
+		}
+		if err := d.openvpn.closeConnection(); err != nil {
+			log.Println("Can't close openvpn")
+			d.sendMessage(messages.ErrorMsg("Can't close openvpn"), c)
 		}
 
 	default:
@@ -240,7 +218,7 @@ func (d *Daemon) connectToMgmt() {
 	log.Println("Connected to management socket")
 	defer c.Close()
 	//"bytecount 1\n"
-	if _, err := c.Write([]byte("state on\n")); err!= nil{
+	if _, err := c.Write([]byte("state on\n")); err != nil {
 		log.Fatalf("Error: can't write to openvpn management\n")
 	}
 
@@ -249,15 +227,69 @@ func (d *Daemon) connectToMgmt() {
 		txt := scanner.Text()
 		log.Println("$$$ GOT: ", txt)
 		if len(txt) > 0 && txt[0] == '>' {
-			switch txt[1:strings.IndexRune(txt,':')] {
+			switch txt[1:strings.IndexRune(txt, ':')] {
 			case "PASSWORD":
-				if _, err := c.Write([]byte("state on\n")); err!= nil{
+				userpass := "username \"Auth\" " + d.openvpn.creds.username +
+					"\n password \"Auth\" " + d.openvpn.creds.password + "\n"
+
+				if _, err := c.Write([]byte(userpass)); err != nil {
 					log.Fatalf("Error: can't write to openvpn management\n")
 				}
 			}
 		}
 	}
-	if err := scanner.Err(); err != nil{
+	if err := scanner.Err(); err != nil {
 		log.Printf("Management error: %v\n", err)
+	}
+}
+
+func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
+	if !d.openvpn.connected {
+		config, ok := msg.Parameters["config"]
+		if !ok {
+			d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
+			return errors.New("no config was given")
+		}
+		auth, ok := msg.Parameters["auth"]
+		if !ok {
+			d.sendMessage(messages.ErrorMsg("Auth method is needed to start openvpn"), c)
+			return errors.New("no auth method was given")
+		}
+		switch auth {
+		case consts.AuthNoAuth:
+			d.openvpn.config = config
+			d.openvpn.creds = credentials{auth: NO_AUTH}
+			return nil
+		case consts.AuthUserPass:
+			username, ok := msg.Parameters["username"]
+			if !ok {
+				d.sendMessage(messages.ErrorMsg("Username is needed to start openvpn"), c)
+				return errors.New("no config was given")
+			}
+			password, ok := msg.Parameters["password"]
+			if !ok {
+				d.sendMessage(messages.ErrorMsg("Password is needed to start openvpn"), c)
+				return errors.New("no config was given")
+			}
+			d.openvpn.config = config
+			d.openvpn.creds = credentials{auth: USER_PASS, username: username, password: password}
+			return nil
+		case consts.AuthPrivateKey:
+			pkey, ok := msg.Parameters["privateKey"]
+			if !ok {
+				d.sendMessage(messages.ErrorMsg("PrivateKey is needed to start openvpn"), c)
+				return errors.New("no config was given")
+			}
+			d.openvpn.config = config
+			d.openvpn.creds = credentials{auth: PRIVATE_KEY, privateKey: pkey}
+			return nil
+		default:
+			d.sendMessage(messages.ErrorMsg("Unknown auth type"), c)
+			return errors.New("unknown auth type")
+		}
+
+	} else {
+		d.sendMessage(messages.ErrorMsg("OpenVPN is already running"), c)
+		return nil
 	}
 }
