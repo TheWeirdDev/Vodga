@@ -134,7 +134,8 @@ func (d *Daemon) stopServer(c net.Conn) {
 
 func (d *Daemon) startOpenVPN(c net.Conn) {
 	cmd := exec.Command("openvpn", "--config", d.openvpn.config,
-		"--management", consts.MgmtSocket, "unix", "--management-query-passwords")
+		"--management", consts.MgmtSocket, "unix", "--management-query-passwords",
+		"--management-hold")
 
 	// create a pipe for the output of the script
 	cmdReader, err := cmd.StdoutPipe()
@@ -209,6 +210,13 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 	}
 }
 
+func (d *Daemon) writeToMgmt(text string, c net.Conn) {
+	text += "\n"
+	if _, err := c.Write([]byte(text)); err != nil {
+		log.Fatalf("Error: can't write to openvpn management\n")
+	}
+}
+
 func (d *Daemon) connectToMgmt() {
 	tries := 10
 	var c net.Conn
@@ -230,9 +238,8 @@ func (d *Daemon) connectToMgmt() {
 	defer c.Close()
 
 	//"bytecount 1\n"
-	if _, err := c.Write([]byte("state on\n")); err != nil {
-		log.Fatalf("Error: can't write to openvpn management\n")
-	}
+	d.writeToMgmt("hold release", c)
+	d.writeToMgmt("state on", c)
 
 	scanner := bufio.NewScanner(c)
 	for scanner.Scan() {
@@ -286,9 +293,6 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 }
 
 func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
-	const authTemplate = `username "Auth" %s
-					 password "Auth" %s
-					 `
 	if len(cmd) < 1 && cmd[0] != '>' {
 		if strings.HasPrefix(cmd, "ERROR:") {
 			//TODO: Broadcast message
@@ -305,12 +309,11 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 			//d.sendMessage(messages.ErrorMsg(errstr, ))
 			return
 		}
-		userpass := fmt.Sprintf(authTemplate,
+		userpass := fmt.Sprintf(`username "Auth" %s
+								 password "Auth" %s`,
 			d.openvpn.creds.username, d.openvpn.creds.password)
 
-		if _, err := c.Write([]byte(userpass)); err != nil {
-			log.Fatalf("Error: can't write to openvpn management\n")
-		}
+		d.writeToMgmt(userpass, c)
 	}
 
 }
