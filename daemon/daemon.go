@@ -227,9 +227,8 @@ func (d *Daemon) connectToMgmt() {
 			break
 		}
 	}
-
-	log.Println("Connected to management socket")
 	defer c.Close()
+
 	//"bytecount 1\n"
 	if _, err := c.Write([]byte("state on\n")); err != nil {
 		log.Fatalf("Error: can't write to openvpn management\n")
@@ -259,9 +258,9 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 			d.sendMessage(messages.ErrorMsg("Auth method is needed to start openvpn"), c)
 			return errors.New("no auth method was given")
 		}
+		d.openvpn.config = config
 		switch auth {
 		case consts.AuthNoAuth:
-			d.openvpn.config = config
 			d.openvpn.creds = credentials{auth: NO_AUTH}
 		case consts.AuthUserPass:
 			username, ok := msg.Parameters["username"]
@@ -274,9 +273,9 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 				d.sendMessage(messages.ErrorMsg("Password is needed to start openvpn"), c)
 				return errors.New("no config was given")
 			}
-			d.openvpn.config = config
 			d.openvpn.creds = credentials{auth: USER_PASS, username: username, password: password}
 		default:
+			d.openvpn.config = ""
 			d.sendMessage(messages.ErrorMsg("Unknown auth type"), c)
 			return errors.New("unknown auth type")
 		}
@@ -287,18 +286,21 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 }
 
 func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
-	authTemplate := `username "Auth" %s
+	const authTemplate = `username "Auth" %s
 					 password "Auth" %s
 					 `
 	if len(cmd) < 1 && cmd[0] != '>' {
+		if strings.HasPrefix(cmd, "ERROR:") {
+			//TODO: Broadcast message
+		}
 		return
 	}
 	colonIndex := strings.IndexRune(cmd, ':')
 
 	switch cmd[1:colonIndex] {
 	case "PASSWORD":
-		errstr := "Verification Failed"
-		if strings.Contains(cmd, errstr){
+		const errstr = "Verification Failed"
+		if strings.Contains(cmd, errstr) {
 			log.Println("Invalid credentials")
 			//d.sendMessage(messages.ErrorMsg(errstr, ))
 			return
