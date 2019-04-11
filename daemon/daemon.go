@@ -152,7 +152,7 @@ func (d *Daemon) startOpenVPN(c net.Conn) {
 
 	go func() {
 		for scanner.Scan() {
-			d.sendMessage(messages.LogMsg(scanner.Text()), c)
+			d.broadcastMessage(messages.LogMsg(scanner.Text()))
 		}
 	}()
 
@@ -171,7 +171,7 @@ func (d *Daemon) startOpenVPN(c net.Conn) {
 		log.Println("OpenVPN Closed")
 	}
 
-	d.sendMessage(messages.SimpleMsg(consts.MsgDisconnected), c)
+	d.broadcastMessage(messages.SimpleMsg(consts.MsgDisconnected))
 }
 
 func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
@@ -267,6 +267,15 @@ func (d *Daemon) resetOpenvpn() {
 	d.openvpn.bytesIn = 0
 	d.openvpn.connected = false
 	d.openvpn.state = ""
+	d.openvpn.creds = credentials{}
+}
+
+func (d *Daemon) broadcastMessage(msg *messages.Message) {
+	for _, conn := range d.conns {
+		if conn != nil {
+			d.sendMessage(msg, conn)
+		}
+	}
 }
 
 func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
