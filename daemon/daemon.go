@@ -203,7 +203,7 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 			d.sendMessage(messages.ErrorMsg("Can't close openvpn"), c)
 		}
 	case consts.MsgKillOpenvpn:
-
+		d.killOpenvpn()
 
 	default:
 		log.Printf("Unknown command: %v\n", msg.Command)
@@ -255,7 +255,10 @@ func (d *Daemon) connectToMgmt() {
 }
 
 func (d *Daemon) killOpenvpn() {
-	exec.Command("killall", "-9", "openvpn")
+	cmd := exec.Command("killall", "-e", "-9", "openvpn")
+	if err := cmd.Run(); err != nil {
+		log.Printf("Error while killing openvpn: %v\n", err)
+	}
 }
 
 func (d *Daemon) resetOpenvpn() {
@@ -295,7 +298,7 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 			}
 			d.openvpn.creds = credentials{auth: USER_PASS, username: username, password: password}
 		default:
-			d.openvpn.config = ""
+			d.resetOpenvpn()
 			d.sendMessage(messages.ErrorMsg("Unknown auth type"), c)
 			return errors.New("unknown auth type")
 		}
@@ -330,4 +333,3 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 	}
 
 }
-

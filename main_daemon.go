@@ -93,7 +93,7 @@ func stopExistingServer() error {
 	}
 	defer c.Close()
 
-	data, err := json.Marshal(&messages.Message{Command:consts.MsgStop})
+	data, err := json.Marshal(messages.SimpleMsg(consts.MsgStop))
 	if err != nil {
 		return err
 	}
@@ -105,14 +105,15 @@ func stopExistingServer() error {
 
 	scanner := bufio.NewScanner(c)
 	if scanner.Scan() {
-		s := scanner.Text()
-		msg := &messages.Message{}
-		err = json.Unmarshal([]byte(s), msg)
+		msg, err := messages.UnmarshalMsg(scanner.Text())
+		if err != nil {
+			return err
+		}
 		if msg.Command == "" {
 			return errors.New("returned command is a empty")
 		}
 		if msg.Command == consts.MsgKilled {
-			log.Println("Server stopped")
+			log.Println("Server restarted")
 			return nil
 		}
 	}
