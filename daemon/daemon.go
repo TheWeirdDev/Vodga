@@ -22,7 +22,7 @@ type Daemon struct {
 	quit    chan struct{}
 	ln      net.Listener
 	conns   []net.Conn
-	mux     sync.Mutex
+	mtx     sync.Mutex
 	openvpn Openvpn
 }
 
@@ -126,16 +126,19 @@ func (d *Daemon) sendMessage(msg *messages.Message, c net.Conn) {
 
 func (d *Daemon) stopServer(c net.Conn) {
 	close(d.quit)
+	d.sendMessage(messages.SimpleMsg(consts.MsgKilled), c)
 	if err := d.ln.Close(); err != nil {
 		log.Fatalf("Server returned an error: %v\n", err)
 	}
-	d.sendMessage(messages.SimpleMsg(consts.MsgKilled), c)
 }
 
 func (d *Daemon) startOpenVPN(c net.Conn) {
 	cmd := exec.Command("openvpn", "--config", d.openvpn.config,
 		"--management", consts.MgmtSocket, "unix", "--management-query-passwords",
 		"--management-hold")
+
+	d.killOpenvpn()
+	defer d.resetOpenvpn()
 
 	// create a pipe for the output of the script
 	cmdReader, err := cmd.StdoutPipe()
@@ -163,21 +166,17 @@ func (d *Daemon) startOpenVPN(c net.Conn) {
 
 	err = cmd.Wait()
 	if err != nil {
-		d.openvpn.process = nil
 		log.Println("OpenVPN closed unexpectedly")
-		d.sendMessage(messages.SimpleMsg(consts.MsgDisconnected), c)
-		return
+	} else {
+		log.Println("OpenVPN Closed")
 	}
 
-	d.openvpn.process = nil
-	log.Println("OpenVPN Closed")
 	d.sendMessage(messages.SimpleMsg(consts.MsgDisconnected), c)
-
 }
 
 func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
-	d.mux.Lock()
-	defer d.mux.Unlock()
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
 
 	switch msg.Command {
 	case consts.MsgStop:
@@ -203,6 +202,8 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 			log.Println("Can't close openvpn")
 			d.sendMessage(messages.ErrorMsg("Can't close openvpn"), c)
 		}
+	case consts.MsgKillOpenvpn:
+
 
 	default:
 		log.Printf("Unknown command: %v\n", msg.Command)
@@ -253,14 +254,26 @@ func (d *Daemon) connectToMgmt() {
 	}
 }
 
+func (d *Daemon) killOpenvpn() {
+	exec.Command("killall", "-9", "openvpn")
+}
+
+func (d *Daemon) resetOpenvpn() {
+	d.openvpn.config = ""
+	d.openvpn.bytesOut = 0
+	d.openvpn.bytesIn = 0
+	d.openvpn.connected = false
+	d.openvpn.state = ""
+}
+
 func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 	if !d.openvpn.connected {
-		config, ok := msg.Parameters["config"]
+		config, ok := msg.Args["config"]
 		if !ok {
 			d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
 			return errors.New("no config was given")
 		}
-		auth, ok := msg.Parameters["auth"]
+		auth, ok := msg.Args["auth"]
 		if !ok {
 			d.sendMessage(messages.ErrorMsg("Auth method is needed to start openvpn"), c)
 			return errors.New("no auth method was given")
@@ -270,12 +283,12 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 		case consts.AuthNoAuth:
 			d.openvpn.creds = credentials{auth: NO_AUTH}
 		case consts.AuthUserPass:
-			username, ok := msg.Parameters["username"]
+			username, ok := msg.Args["username"]
 			if !ok {
 				d.sendMessage(messages.ErrorMsg("Username is needed to start openvpn"), c)
 				return errors.New("no config was given")
 			}
-			password, ok := msg.Parameters["password"]
+			password, ok := msg.Args["password"]
 			if !ok {
 				d.sendMessage(messages.ErrorMsg("Password is needed to start openvpn"), c)
 				return errors.New("no config was given")
@@ -317,3 +330,4 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 	}
 
 }
+

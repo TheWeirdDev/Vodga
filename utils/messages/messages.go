@@ -8,8 +8,8 @@ import (
 )
 
 type Message struct {
-	Command    string            `json:"command"`
-	Parameters map[string]string `json:"parameters"`
+	Command string            `json:"cmd"`
+	Args    map[string]string `json:"args"`
 }
 
 func SimpleMsg(cmd string) *Message{
@@ -25,7 +25,7 @@ func UnmarshalMsg(text string) (*Message, error) {
 }
 
 func (msg *Message) EnsureEnoughArguments(count int) error {
-	c := len(msg.Parameters)
+	c := len(msg.Args)
 	if c != count {
 		return fmt.Errorf("command %q takes %d argument(s) but %d were given", msg.Command, count, c)
 	}

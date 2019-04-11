@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/TheWeirdDev/Vodga/daemon"
 	"github.com/TheWeirdDev/Vodga/utils/consts"
+	"github.com/TheWeirdDev/Vodga/utils/messages"
 	"log"
 	"net"
 	"os"
@@ -90,20 +93,28 @@ func stopExistingServer() error {
 	}
 	defer c.Close()
 
-	_, err = c.Write([]byte(consts.MsgStop))
+	data, err := json.Marshal(&messages.Message{Command:consts.MsgStop})
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	_, err = c.Write(data)
 	if err != nil {
 		return err
 	}
 
-	buf := make([]byte, 1024)
-	n, err := c.Read(buf[:])
-	if err != nil {
-		return err
-	}
-
-	if string(buf[0:n]) == consts.MsgKilled {
-		log.Println("Server stopped")
-		return nil
+	scanner := bufio.NewScanner(c)
+	if scanner.Scan() {
+		s := scanner.Text()
+		msg := &messages.Message{}
+		err = json.Unmarshal([]byte(s), msg)
+		if msg.Command == "" {
+			return errors.New("returned command is a empty")
+		}
+		if msg.Command == consts.MsgKilled {
+			log.Println("Server stopped")
+			return nil
+		}
 	}
 	return errors.New("can't stop the server")
 }
