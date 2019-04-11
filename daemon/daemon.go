@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -53,7 +54,9 @@ func (d *Daemon) StartServer() {
 			syscall.SIGTERM, syscall.SIGQUIT)
 		// Waits for signals
 		err := <-sigchan
-		log.Printf("Server Killed by: %v", err)
+		log.Printf("Server Killed by: '%v', closing openvpn\n", err)
+		d.openvpn.closeConnection()
+		time.Sleep(1500 * time.Millisecond)
 		close(*kill)
 		ln.Close()
 	}(d.ln, &d.quit)
@@ -69,7 +72,6 @@ loop:
 			// it means server stopped for a known reason
 			case <-d.quit:
 				log.Println("Server stopped")
-
 				// Otherwise the error is unknown and needs to be handled
 			default:
 				log.Printf("Accept error: %+v", err)
@@ -204,6 +206,10 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 		}
 	case consts.MsgKillOpenvpn:
 		d.killOpenvpn()
+	case consts.MsgGetBytecount:
+		d.sendMessage(&messages.Message{consts.MsgByteCount,
+			map[string]string{"in": strconv.Itoa(d.openvpn.bytesIn),
+				"out": strconv.Itoa(d.openvpn.bytesOut)}}, c)
 
 	default:
 		log.Printf("Unknown command: %v\n", msg.Command)
@@ -238,9 +244,9 @@ func (d *Daemon) connectToMgmt() {
 	}
 	defer c.Close()
 
-	//"bytecount 1\n"
 	d.writeToMgmt("hold release", c)
 	d.writeToMgmt("state on", c)
+	d.writeToMgmt("bytecount 1", c)
 
 	scanner := bufio.NewScanner(c)
 	for scanner.Scan() {
@@ -324,6 +330,12 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 		}
 		return
 	}
+	fieldsFunc := func(r rune) bool {
+		if r == ',' {
+			return true
+		}
+		return false
+	}
 	colonIndex := strings.IndexRune(cmd, ':')
 
 	switch cmd[1:colonIndex] {
@@ -342,12 +354,7 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 
 	case "STATE":
 		state := cmd[colonIndex+1:]
-		states := strings.FieldsFunc(state, func(r rune) bool {
-			if r == ',' {
-				return true
-			}
-			return false
-		})
+		states := strings.FieldsFunc(state, fieldsFunc)
 		if len(state) < 2{
 			return
 		}
@@ -355,6 +362,16 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 		d.broadcastMessage(&messages.Message{consts.MsgStateChanged,
 			map[string]string{"state" : state}})
 
+	case "BYTECOUNT":
+		data := cmd[colonIndex+1:]
+		inout := strings.FieldsFunc(data, fieldsFunc)
+		if len(inout) < 2{
+			return
+		}
+		in, _ := strconv.Atoi(inout[0])
+		out, _ := strconv.Atoi(inout[1])
+		d.openvpn.bytesIn = in
+		d.openvpn.bytesOut = out
 	}
 
 }

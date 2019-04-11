@@ -24,12 +24,15 @@ type Openvpn struct {
 	process   *exec.Cmd
 	connected bool
 	state     string
-	bytesIn   int64
-	bytesOut  int64
+	bytesIn   int
+	bytesOut  int
 }
 
 func (o *Openvpn) closeConnection() error {
-	return o.process.Process.Signal(os.Interrupt)
+	if o.process != nil {
+		return o.process.Process.Signal(os.Interrupt)
+	}
+	return nil
 }
 
 func (o *Openvpn) isRunning() bool {
