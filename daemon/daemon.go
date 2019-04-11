@@ -339,6 +339,22 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 			d.openvpn.creds.username, d.openvpn.creds.password)
 
 		d.writeToMgmt(userpass, c)
+
+	case "STATE":
+		state := cmd[colonIndex+1:]
+		states := strings.FieldsFunc(state, func(r rune) bool {
+			if r == ',' {
+				return true
+			}
+			return false
+		})
+		if len(state) < 2{
+			return
+		}
+		state = states[1]
+		d.broadcastMessage(&messages.Message{consts.MsgStateChanged,
+			map[string]string{"state" : state}})
+
 	}
 
 }

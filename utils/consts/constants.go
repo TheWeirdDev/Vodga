@@ -13,6 +13,7 @@ const (
 	MsgDisconnect   = "DISCONNECT"
 	MsgDisconnected = "DISCONNECTED"
 	MsgKillOpenvpn  = "KILL_OPENVPN"
+	MsgStateChanged = "STATE_CHANGED"
 	AuthNoAuth      = "NO_AUTH"
 	AuthUserPass    = "AUTH_USER_PASS"
 )
