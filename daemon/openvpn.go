@@ -26,6 +26,8 @@ type Openvpn struct {
 	state     string
 	bytesIn   int
 	bytesOut  int
+	totalIn   int
+	totalOut  int
 }
 
 func (o *Openvpn) closeConnection() error {

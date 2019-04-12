@@ -98,10 +98,10 @@ func (d *Daemon) daemonServer(c net.Conn, id int) {
 			continue
 		}
 
-		log.Printf("Server got(#%d): %s\n", id, text)
+		log.Printf("Client %d: %s\n", id, text)
 		msg, err := messages.UnmarshalMsg(text)
 		if err != nil {
-			log.Printf("Got invalid command: %v", err)
+			log.Printf("Got invalid message: %v", err)
 			d.sendMessage(messages.SimpleMsg(consts.UnknownCmd), c)
 			continue
 		}
@@ -128,7 +128,8 @@ func (d *Daemon) sendMessage(msg *messages.Message, c net.Conn) {
 
 func (d *Daemon) stopServer(c net.Conn) {
 	close(d.quit)
-	d.sendMessage(messages.SimpleMsg(consts.MsgKilled), c)
+	// Send the information before closing the socket
+	d.broadcastMessage(messages.SimpleMsg(consts.MsgKilled))
 	if err := d.ln.Close(); err != nil {
 		log.Fatalf("Server returned an error: %v\n", err)
 	}
@@ -139,7 +140,10 @@ func (d *Daemon) startOpenVPN(c net.Conn) {
 		"--management", consts.MgmtSocket, "unix", "--management-query-passwords",
 		"--management-hold")
 
+	// Kill other openvpn instances before starting this one
 	d.killOpenvpn()
+
+	// Reset openvpn state after it's closed
 	defer d.resetOpenvpn()
 
 	// create a pipe for the output of the script
@@ -205,7 +209,8 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 		d.killOpenvpn()
 
 	case consts.MsgGetBytecount:
-		d.sendMessage(messages.BytecountMsg(d.openvpn.bytesIn, d.openvpn.bytesOut), c)
+		d.sendMessage(messages.BytecountMsg(d.openvpn.bytesIn, d.openvpn.bytesOut,
+			d.openvpn.totalIn, d.openvpn.bytesOut), c)
 
 	default:
 		log.Printf("Unknown command: %v\n", msg.Command)
@@ -216,7 +221,7 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 func (d *Daemon) writeToMgmt(text string, c net.Conn) {
 	text += "\n"
 	if _, err := c.Write([]byte(text)); err != nil {
-		log.Fatalf("Error: can't write to openvpn management\n")
+		log.Println("Error: can't write to openvpn management")
 	}
 }
 
@@ -224,6 +229,8 @@ func (d *Daemon) connectToMgmt() {
 	tries := 10
 	var c net.Conn
 
+	// Try connecting to mgmt socket until it's connected
+	// Maximum tries: 10 times
 	for {
 		var err error
 		c, err = net.Dial("unix", consts.MgmtSocket)
@@ -240,6 +247,7 @@ func (d *Daemon) connectToMgmt() {
 	}
 	defer c.Close()
 
+	// Starts the show
 	d.writeToMgmt("hold release", c)
 	d.writeToMgmt("state on", c)
 	d.writeToMgmt("bytecount 1", c)
@@ -328,6 +336,7 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 			errstr := cmd[colonIndex+1:]
 			log.Println("Mgmt error: ", cmd[colonIndex+1:])
 			d.broadcastMessage(messages.ErrorMsg(errstr))
+			return
 		}
 	}
 
@@ -367,6 +376,8 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 		}
 		in, _ := strconv.Atoi(inout[0])
 		out, _ := strconv.Atoi(inout[1])
+		d.openvpn.totalIn += in - d.openvpn.bytesIn
+		d.openvpn.totalOut += out - d.openvpn.bytesOut
 		d.openvpn.bytesIn = in
 		d.openvpn.bytesOut = out
 	}

@@ -16,17 +16,21 @@ func SimpleMsg(cmd string) *Message {
 	return &Message{Command: cmd}
 }
 
-func BytecountMsg(in, out int) *Message {
-	bytecount := map[string]string{"in": strconv.Itoa(in),
-		"out": strconv.Itoa(out)}
+func BytecountMsg(in, out, tin, tout int) *Message {
+	bytecount := map[string]string{
+		"in":   strconv.Itoa(in),
+		"out":  strconv.Itoa(out),
+		"tin":  strconv.Itoa(tin),
+		"tout": strconv.Itoa(tout),
+	}
 
 	return &Message{Command: consts.MsgByteCount,
 		Args: bytecount}
 }
 
 func StateMsg(state string) *Message {
-	return &Message{Command:consts.MsgStateChanged,
-		Args: map[string]string{"state" : state}}
+	return &Message{Command: consts.MsgStateChanged,
+		Args: map[string]string{"state": state}}
 }
 
 func UnmarshalMsg(text string) (*Message, error) {
