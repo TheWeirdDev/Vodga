@@ -3,8 +3,8 @@ package messages
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/TheWeirdDev/Vodga/utils/consts"
+	"strconv"
 )
 
 type Message struct {
@@ -12,9 +12,23 @@ type Message struct {
 	Args    map[string]string `json:"args"`
 }
 
-func SimpleMsg(cmd string) *Message{
-	return &Message{Command:cmd}
+func SimpleMsg(cmd string) *Message {
+	return &Message{Command: cmd}
 }
+
+func BytecountMsg(in, out int) *Message {
+	bytecount := map[string]string{"in": strconv.Itoa(in),
+		"out": strconv.Itoa(out)}
+
+	return &Message{Command: consts.MsgByteCount,
+		Args: bytecount}
+}
+
+func StateMsg(state string) *Message {
+	return &Message{Command:consts.MsgStateChanged,
+		Args: map[string]string{"state" : state}}
+}
+
 func UnmarshalMsg(text string) (*Message, error) {
 	msg := &Message{}
 	err := json.Unmarshal([]byte(text), msg)
@@ -22,14 +36,6 @@ func UnmarshalMsg(text string) (*Message, error) {
 		return nil, errors.New("command is a empty")
 	}
 	return msg, err
-}
-
-func (msg *Message) EnsureEnoughArguments(count int) error {
-	c := len(msg.Args)
-	if c != count {
-		return fmt.Errorf("command %q takes %d argument(s) but %d were given", msg.Command, count, c)
-	}
-	return nil
 }
 
 func ErrorMsg(msg string) *Message {

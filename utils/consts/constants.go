@@ -16,6 +16,7 @@ const (
 	MsgStateChanged = "STATE_CHANGED"
 	MsgGetBytecount = "GET_BYTECOUNT"
 	MsgByteCount    = "BYTECOUNT"
+	MsgAuthFailed   = "AUTH_FAILED"
 	AuthNoAuth      = "NO_AUTH"
 	AuthUserPass    = "AUTH_USER_PASS"
 )

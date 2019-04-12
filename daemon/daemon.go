@@ -192,10 +192,6 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 		go d.startOpenVPN(c)
 
 	case consts.MsgDisconnect:
-		if err := msg.EnsureEnoughArguments(0); err != nil {
-			d.sendMessage(messages.ErrorMsg(err.Error()), c)
-			return
-		}
 		if !d.openvpn.isRunning() {
 			d.sendMessage(messages.ErrorMsg("OpenVPN is not running"), c)
 			return
@@ -204,12 +200,12 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 			log.Println("Can't close openvpn")
 			d.sendMessage(messages.ErrorMsg("Can't close openvpn"), c)
 		}
+
 	case consts.MsgKillOpenvpn:
 		d.killOpenvpn()
+
 	case consts.MsgGetBytecount:
-		d.sendMessage(&messages.Message{consts.MsgByteCount,
-			map[string]string{"in": strconv.Itoa(d.openvpn.bytesIn),
-				"out": strconv.Itoa(d.openvpn.bytesOut)}}, c)
+		d.sendMessage(messages.BytecountMsg(d.openvpn.bytesIn, d.openvpn.bytesOut), c)
 
 	default:
 		log.Printf("Unknown command: %v\n", msg.Command)
@@ -252,7 +248,7 @@ func (d *Daemon) connectToMgmt() {
 	for scanner.Scan() {
 		txt := scanner.Text()
 		//TODO: Remove all debug lines after it's done
-		log.Println("$$$ GOT: ", txt)
+		log.Println("MGMT: ", txt)
 		d.processMgmtCommand(txt, c)
 	}
 	if err := scanner.Err(); err != nil {
@@ -324,17 +320,19 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 }
 
 func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
-	if len(cmd) < 1 && cmd[0] != '>' {
-		if strings.HasPrefix(cmd, "ERROR:") {
-			//TODO: Broadcast message
-		}
+	if len(cmd) < 1 {
 		return
-	}
-	fieldsFunc := func(r rune) bool {
-		if r == ',' {
-			return true
+	} else if cmd[0] != '>' {
+		if strings.HasPrefix(cmd, "ERROR:") {
+			colonIndex := strings.IndexRune(cmd, ':')
+			errstr := cmd[colonIndex+1:]
+			log.Println("Mgmt error: ", cmd[colonIndex+1:])
+			d.broadcastMessage(messages.ErrorMsg(errstr))
 		}
-		return false
+	}
+
+	fieldsFunc := func(r rune) bool {
+		return r == ','
 	}
 	colonIndex := strings.IndexRune(cmd, ':')
 
@@ -343,7 +341,7 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 		const errstr = "Verification Failed"
 		if strings.Contains(cmd, errstr) {
 			log.Println("Invalid credentials")
-			//d.sendMessage(messages.ErrorMsg(errstr, ))
+			d.broadcastMessage(messages.ErrorMsg(consts.MsgAuthFailed))
 			return
 		}
 		userpass := fmt.Sprintf(`username "Auth" %s
@@ -355,17 +353,16 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 	case "STATE":
 		state := cmd[colonIndex+1:]
 		states := strings.FieldsFunc(state, fieldsFunc)
-		if len(state) < 2{
+		if len(state) < 2 {
 			return
 		}
 		state = states[1]
-		d.broadcastMessage(&messages.Message{consts.MsgStateChanged,
-			map[string]string{"state" : state}})
+		d.broadcastMessage(messages.StateMsg(state))
 
 	case "BYTECOUNT":
 		data := cmd[colonIndex+1:]
 		inout := strings.FieldsFunc(data, fieldsFunc)
-		if len(inout) < 2{
+		if len(inout) < 2 {
 			return
 		}
 		in, _ := strconv.Atoi(inout[0])
