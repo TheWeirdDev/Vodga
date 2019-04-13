@@ -1,26 +1,15 @@
 package daemon
 
 import (
+	"github.com/TheWeirdDev/Vodga/shared"
 	"os"
 	"os/exec"
 )
 
-type Auth int
-
-const (
-	NO_AUTH Auth = iota
-	USER_PASS
-)
-
-type credentials struct {
-	auth       Auth
-	username   string
-	password   string
-}
 
 type Openvpn struct {
 	config    string
-	creds     credentials
+	creds     shared.Credentials
 	process   *exec.Cmd
 	connected bool
 	state     string

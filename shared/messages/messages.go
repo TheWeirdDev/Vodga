@@ -3,7 +3,7 @@ package messages
 import (
 	"encoding/json"
 	"errors"
-	"github.com/TheWeirdDev/Vodga/utils/consts"
+	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"strconv"
 )
 

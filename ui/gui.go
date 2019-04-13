@@ -1,9 +1,9 @@
 package ui
 
 import (
+	"github.com/TheWeirdDev/Vodga/shared/consts"
+	"github.com/TheWeirdDev/Vodga/shared/utils"
 	"github.com/TheWeirdDev/Vodga/ui/gtk_deprecated"
-	"github.com/TheWeirdDev/Vodga/utils"
-	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 )
@@ -79,7 +79,7 @@ func initWidgets() {
 	mainWindow.trayMenuItem = menuItemExit
 	mainWindow.trayMenu.Append(mainWindow.trayMenuItem)
 	if _, err = mainWindow.trayIcon.Connect("activate", func() {
-		if !mainWindow.window.IsVisible(){
+		if !mainWindow.window.IsVisible() {
 			mainWindow.window.SetVisible(true)
 		} else if !mainWindow.window.IsActive() {
 			mainWindow.window.Present()
