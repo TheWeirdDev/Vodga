@@ -27,7 +27,7 @@ func StartGui() {
 	defer func() {
 		initDone = true
 		initWidgets()
-		showMainGUI()
+		showMainWindow()
 	}()
 
 	builder, err := gtk.BuilderNewFromFile(consts.UIFilePath)
@@ -90,16 +90,17 @@ func initWidgets() {
 		log.Fatalf("Error: Cannot connect menu item")
 	}
 
-	_, err = mainWindow.trayIcon.Connect("popup_menu", func(icon interface{}, a uint, b uint32) {
-		mainWindow.trayIcon.PopupMenu(mainWindow.trayMenu, a, b)
-	})
+	_, err = mainWindow.trayIcon.Connect("popup_menu",
+		func(icon interface{}, a uint, b uint32) {
+			mainWindow.trayIcon.PopupMenu(mainWindow.trayMenu, a, b)
+		})
 
 	if err != nil {
 		log.Fatalf("Error: Cannot connect tray popup menu")
 	}
 }
 
-func showMainGUI() {
+func showMainWindow() {
 	if mainWindow.window == nil {
 		log.Fatalf("Error: Main window is not initialized")
 	}

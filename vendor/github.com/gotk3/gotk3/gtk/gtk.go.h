@@ -262,6 +262,12 @@ toGtkImage(void *p)
 	return (GTK_IMAGE(p));
 }
 
+static GtkButtonBox *
+toGtkButtonBox(void *p)
+{
+	return (GTK_BUTTON_BOX(p));
+}
+
 static GtkButton *
 toGtkButton(void *p)
 {
@@ -700,6 +706,12 @@ toGtkToolButton(void *p)
 	return (GTK_TOOL_BUTTON(p));
 }
 
+static GtkToggleToolButton *
+toGtkToggleToolButton(void *p)
+{
+	return (GTK_TOGGLE_TOOL_BUTTON(p));
+}
+
 static GtkSeparatorToolItem *
 toGtkSeparatorToolItem(void *p)
 {
@@ -908,4 +920,10 @@ static inline void _gtk_print_run_page_setup_dialog_async(GtkWindow *parent, Gtk
 	GtkPrintSettings *settings, gpointer data) {
 	gtk_print_run_page_setup_dialog_async(parent, setup, settings,
 		(GtkPageSetupDoneFunc)(goPageSetupDone), data);
+}
+
+extern gboolean goTreeModelFilterFuncs (GtkTreeModel *model, GtkTreeIter *iter, gpointer data);
+
+static inline void _gtk_tree_model_filter_set_visible_func(GtkTreeModelFilter *filter, gpointer user_data) {
+    gtk_tree_model_filter_set_visible_func(filter, (GtkTreeModelFilterVisibleFunc)(goTreeModelFilterFuncs), user_data, NULL);
 }

@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e2ce5eeea43f9551818d086e3eaa8be1eda98cbe278cb1b91386636c9eeb46b9"
+  digest = "1:38ab73678fdc04f41629b1dfbfc5a9be3efbf8b80af1518e5493bd167bf16faa"
   name = "github.com/gotk3/gotk3"
   packages = [
     "cairo",
@@ -13,7 +13,34 @@
     "pango",
   ]
   pruneopts = "UT"
-  revision = "24002f352641b933946d6532f4395efbfdb23c41"
+  revision = "ff571eb317acbd4ddf053319cf5e5f042dcefa43"
+
+[[projects]]
+  digest = "1:e5f4d2be19e2ebab13b8e4248792e1841518fd728cd73b042ee4a5630796bb37"
+  name = "github.com/oschwald/geoip2-golang"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "347ca45869a87337a71b11efe9b3043bc10df97f"
+  version = "v1.3.0"
+
+[[projects]]
+  digest = "1:07e8589503b7ec22430dae6eed6f2c17e4249ab245574f4fd0ba8fc9c597d138"
+  name = "github.com/oschwald/maxminddb-golang"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c5bec84d1963260297932a1b7a1753c8420717a7"
+  version = "v1.3.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:a63ab7381e8941204bf91ce0bbdcb9f47767de756f98209a6a059dcbd52d57b6"
+  name = "golang.org/x/sys"
+  packages = [
+    "unix",
+    "windows",
+  ]
+  pruneopts = "UT"
+  revision = "cab07311ab81fc7f180fddf7410b604373b20a00"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -22,6 +49,7 @@
     "github.com/gotk3/gotk3/gdk",
     "github.com/gotk3/gotk3/glib",
     "github.com/gotk3/gotk3/gtk",
+    "github.com/oschwald/geoip2-golang",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
