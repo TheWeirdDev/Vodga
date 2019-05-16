@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TheWeirdDev/Vodga/utils/consts"
-	"github.com/TheWeirdDev/Vodga/utils/messages"
+	"github.com/TheWeirdDev/Vodga/shared"
+	"github.com/TheWeirdDev/Vodga/shared/consts"
+	"github.com/TheWeirdDev/Vodga/shared/messages"
 	"log"
 	"net"
 	"os"
@@ -277,7 +278,7 @@ func (d *Daemon) resetOpenvpn() {
 	d.openvpn.bytesIn = 0
 	d.openvpn.connected = false
 	d.openvpn.state = ""
-	d.openvpn.creds = credentials{}
+	d.openvpn.creds = shared.Credentials{}
 }
 
 func (d *Daemon) broadcastMessage(msg *messages.Message) {
@@ -303,7 +304,7 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 		d.openvpn.config = config
 		switch auth {
 		case consts.AuthNoAuth:
-			d.openvpn.creds = credentials{auth: NO_AUTH}
+			d.openvpn.creds = shared.Credentials{Auth: shared.NO_AUTH}
 		case consts.AuthUserPass:
 			username, ok := msg.Args["username"]
 			if !ok {
@@ -315,7 +316,7 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 				d.sendMessage(messages.ErrorMsg("Password is needed to start openvpn"), c)
 				return errors.New("no config was given")
 			}
-			d.openvpn.creds = credentials{auth: USER_PASS, username: username, password: password}
+			d.openvpn.creds = shared.Credentials{Auth: shared.USER_PASS, Username: username, Password: password}
 		default:
 			d.resetOpenvpn()
 			d.sendMessage(messages.ErrorMsg("Unknown auth type"), c)
@@ -355,7 +356,7 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 		}
 		userpass := fmt.Sprintf(`username "Auth" %s
 								 password "Auth" %s`,
-			d.openvpn.creds.username, d.openvpn.creds.password)
+			d.openvpn.creds.Username, d.openvpn.creds.Password)
 
 		d.writeToMgmt(userpass, c)
 

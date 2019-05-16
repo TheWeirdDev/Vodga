@@ -1,9 +1,9 @@
 package ui
 
 import (
+	"github.com/TheWeirdDev/Vodga/shared/consts"
+	"github.com/TheWeirdDev/Vodga/shared/utils"
 	"github.com/TheWeirdDev/Vodga/ui/gtk_deprecated"
-	"github.com/TheWeirdDev/Vodga/utils"
-	"github.com/TheWeirdDev/Vodga/utils/consts"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
 )
@@ -27,7 +27,7 @@ func StartGui() {
 	defer func() {
 		initDone = true
 		initWidgets()
-		showMainGUI()
+		showMainWindow()
 	}()
 
 	builder, err := gtk.BuilderNewFromFile(consts.UIFilePath)
@@ -79,7 +79,7 @@ func initWidgets() {
 	mainWindow.trayMenuItem = menuItemExit
 	mainWindow.trayMenu.Append(mainWindow.trayMenuItem)
 	if _, err = mainWindow.trayIcon.Connect("activate", func() {
-		if !mainWindow.window.IsVisible(){
+		if !mainWindow.window.IsVisible() {
 			mainWindow.window.SetVisible(true)
 		} else if !mainWindow.window.IsActive() {
 			mainWindow.window.Present()
@@ -90,16 +90,17 @@ func initWidgets() {
 		log.Fatalf("Error: Cannot connect menu item")
 	}
 
-	_, err = mainWindow.trayIcon.Connect("popup_menu", func(icon interface{}, a uint, b uint32) {
-		mainWindow.trayIcon.PopupMenu(mainWindow.trayMenu, a, b)
-	})
+	_, err = mainWindow.trayIcon.Connect("popup_menu",
+		func(icon interface{}, a uint, b uint32) {
+			mainWindow.trayIcon.PopupMenu(mainWindow.trayMenu, a, b)
+		})
 
 	if err != nil {
 		log.Fatalf("Error: Cannot connect tray popup menu")
 	}
 }
 
-func showMainGUI() {
+func showMainWindow() {
 	if mainWindow.window == nil {
 		log.Fatalf("Error: Main window is not initialized")
 	}
