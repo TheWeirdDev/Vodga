@@ -9,7 +9,8 @@ import (
 func main() {
 	gtk.Init(nil)
 
-	ui.StartGui()
+	gui := ui.CreateGUI()
+	gui.Run()
 
 	gtk.Main()
 }

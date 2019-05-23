@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/TheWeirdDev/Vodga/shared"
@@ -103,7 +102,7 @@ func (d *Daemon) daemonServer(c net.Conn, id int) {
 		msg, err := messages.UnmarshalMsg(text)
 		if err != nil {
 			log.Printf("Got invalid message: %v", err)
-			d.sendMessage(messages.SimpleMsg(consts.UnknownCmd), c)
+			messages.SendMessage(messages.SimpleMsg(consts.UnknownCmd), c)
 			continue
 		}
 		d.processMessage(msg, c)
@@ -114,18 +113,6 @@ func (d *Daemon) daemonServer(c net.Conn, id int) {
 	log.Printf("Client #%d disconnected\n", id)
 }
 
-func (d *Daemon) sendMessage(msg *messages.Message, c net.Conn) {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("Error: %v\n", err)
-		return
-	}
-	data = append(data, '\n')
-	_, err = c.Write(data)
-	if err != nil {
-		log.Println("Error: can't write to connection")
-	}
-}
 
 func (d *Daemon) stopServer(c net.Conn) {
 	close(d.quit)
@@ -150,7 +137,7 @@ func (d *Daemon) startOpenVPN(c net.Conn) {
 	// create a pipe for the output of the script
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		d.sendMessage(messages.ErrorMsg("Can't open StdoutPipe for OpenVPN"), c)
+		messages.SendMessage(messages.ErrorMsg("Can't open StdoutPipe for OpenVPN"), c)
 		return
 	}
 
@@ -165,7 +152,7 @@ func (d *Daemon) startOpenVPN(c net.Conn) {
 
 	err = cmd.Start()
 	if err != nil {
-		d.sendMessage(messages.ErrorMsg("Can't start OpenVPN"), c)
+		messages.SendMessage(messages.ErrorMsg("Can't start OpenVPN"), c)
 		return
 	}
 	go d.connectToMgmt()
@@ -198,24 +185,24 @@ func (d *Daemon) processMessage(msg *messages.Message, c net.Conn) {
 
 	case consts.MsgDisconnect:
 		if !d.openvpn.isRunning() {
-			d.sendMessage(messages.ErrorMsg("OpenVPN is not running"), c)
+			messages.SendMessage(messages.ErrorMsg("OpenVPN is not running"), c)
 			return
 		}
 		if err := d.openvpn.closeConnection(); err != nil {
 			log.Println("Can't close openvpn")
-			d.sendMessage(messages.ErrorMsg("Can't close openvpn"), c)
+			messages.SendMessage(messages.ErrorMsg("Can't close openvpn"), c)
 		}
 
 	case consts.MsgKillOpenvpn:
 		d.killOpenvpn()
 
 	case consts.MsgGetBytecount:
-		d.sendMessage(messages.BytecountMsg(d.openvpn.bytesIn, d.openvpn.bytesOut,
+		messages.SendMessage(messages.BytecountMsg(d.openvpn.bytesIn, d.openvpn.bytesOut,
 			d.openvpn.totalIn, d.openvpn.bytesOut), c)
 
 	default:
 		log.Printf("Unknown command: %v\n", msg.Command)
-		d.sendMessage(messages.ErrorMsg(consts.UnknownCmd), c)
+		messages.SendMessage(messages.ErrorMsg(consts.UnknownCmd), c)
 	}
 }
 
@@ -284,7 +271,7 @@ func (d *Daemon) resetOpenvpn() {
 func (d *Daemon) broadcastMessage(msg *messages.Message) {
 	for _, conn := range d.conns {
 		if conn != nil {
-			d.sendMessage(msg, conn)
+			messages.SendMessage(msg, conn)
 		}
 	}
 }
@@ -293,12 +280,12 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 	if !d.openvpn.connected {
 		config, ok := msg.Args["config"]
 		if !ok {
-			d.sendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
+			messages.SendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
 			return errors.New("no config was given")
 		}
 		auth, ok := msg.Args["auth"]
 		if !ok {
-			d.sendMessage(messages.ErrorMsg("Auth method is needed to start openvpn"), c)
+			messages.SendMessage(messages.ErrorMsg("Auth method is needed to start openvpn"), c)
 			return errors.New("no auth method was given")
 		}
 		d.openvpn.config = config
@@ -308,22 +295,22 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 		case consts.AuthUserPass:
 			username, ok := msg.Args["username"]
 			if !ok {
-				d.sendMessage(messages.ErrorMsg("Username is needed to start openvpn"), c)
+				messages.SendMessage(messages.ErrorMsg("Username is needed to start openvpn"), c)
 				return errors.New("no config was given")
 			}
 			password, ok := msg.Args["password"]
 			if !ok {
-				d.sendMessage(messages.ErrorMsg("Password is needed to start openvpn"), c)
+				messages.SendMessage(messages.ErrorMsg("Password is needed to start openvpn"), c)
 				return errors.New("no config was given")
 			}
 			d.openvpn.creds = shared.Credentials{Auth: shared.USER_PASS, Username: username, Password: password}
 		default:
 			d.resetOpenvpn()
-			d.sendMessage(messages.ErrorMsg("Unknown auth type"), c)
+			messages.SendMessage(messages.ErrorMsg("Unknown auth type"), c)
 			return errors.New("unknown auth type")
 		}
 	} else {
-		d.sendMessage(messages.ErrorMsg("OpenVPN is already running"), c)
+		messages.SendMessage(messages.ErrorMsg("OpenVPN is already running"), c)
 	}
 	return nil
 }

@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
+	"github.com/TheWeirdDev/Vodga/shared/messages"
 	"github.com/TheWeirdDev/Vodga/shared/utils"
 	"github.com/TheWeirdDev/Vodga/ui/gtk_deprecated"
 	"github.com/gotk3/gotk3/glib"
@@ -14,129 +16,161 @@ import (
 	"time"
 )
 
-type MainWindow struct {
+type mainGUI struct {
 	builder      *gtk.Builder
 	window       *gtk.Window
 	trayIcon     *gtk_deprecated.StatusIcon
 	trayMenu     *gtk.Menu
 	trayMenuItem *gtk.MenuItem
 	server       net.Conn
+	state        string
 	quit         chan struct{}
 }
 
-var mainWindow = &MainWindow{}
-var initDone = false
+func CreateGUI() *mainGUI {
+	maingui := &mainGUI{}
+	return maingui
+}
 
-func StartGui() {
-	if initDone {
-		log.Fatalf("Error: GUI is already Initialized")
-		return
-	}
+func (gui *mainGUI) Run() {
 	defer func() {
-		initDone = true
-		initWidgets()
-		showMainWindow()
-		connectToDaemon()
+		gui.initWidgets()
+		gui.showMainWindow()
+		gui.connectToDaemon()
 	}()
-	mainWindow.quit = make(chan struct{})
+
+	gui.quit = make(chan struct{})
 	builder, err := gtk.BuilderNewFromFile(consts.UIFilePath)
 	if err != nil {
 		log.Fatalf("Error: Can not initialize the ui builer")
 	}
-	mainWindow.builder = builder
+	gui.builder = builder
 
 	window, ok := (*utils.GetWidget(builder, "main_window")).(*gtk.Window)
 	if !ok {
 		log.Fatalf("Error: GtkWindow not found")
 	}
-	mainWindow.window = window
+	gui.window = window
 
 	connectBtn, _ := (*utils.GetWidget(builder, "connect_btn")).(*gtk.Button)
-	connectBtn.Connect("clicked", func() {
-		mainWindow.server.Write([]byte("Hi\n"))
+	_, _ = connectBtn.Connect("clicked", func() {
+
 	})
 
-	_, err2 := window.Connect("destroy", func() {
-		close(mainWindow.quit)
-		if mainWindow.server != nil {
-			mainWindow.server.Close()
+	_, _ = window.Connect("destroy", func() {
+		close(gui.quit)
+		if gui.server != nil {
+			gui.server.Close()
 		}
 		time.Sleep(20 * time.Millisecond)
 		gtk.MainQuit()
 	})
 
-	if err2 != nil {
-		log.Fatalf("Error: Cannot connect signals for GtkWindow")
-	}
+	go func() {
+		tck := time.Tick(time.Second)
+		for range tck {
+			if gui.server != nil && gui.state == consts.StateCONNECTED {
+				err := messages.SendMessage(messages.GetBytecountMsg(), gui.server)
+				if err != nil {
+					log.Printf("Error: %v\n", err)
+				}
+			}
+		}
+	}()
 }
 
-func listenToDaemon() {
-	//scanner := bufio.NewScanner(mainWindow.server)
-	buff := make([]byte, 100)
+func (gui *mainGUI) listenToDaemon() {
+	scanner := bufio.NewScanner(gui.server)
 
-	for {
-		_, err := mainWindow.server.Read(buff)
+	for scanner.Scan() {
+		text := scanner.Text()
+		msg, err := messages.UnmarshalMsg(text)
 		if err != nil {
-			if err != io.EOF {
-				fmt.Println("read error:", err)
-			}
-			break
+			log.Printf("Error unmarshaling the message: %v\n", err)
 		}
+		switch msg.Command {
+		case consts.MsgByteCount:
+		//TODO: Finish this
+
+		case consts.MsgStateChanged:
+			state, ok := msg.Args["state"]
+			if !ok {
+				log.Println("Error: Unknown state message")
+				break
+			}
+			gui.state = state
+			//TODO: Update state text
+		case consts.MsgDisconnected:
+			//TODO: Update text
+		case consts.MsgError:
+			// TODO: Show error
+		}
+
 	}
 	select {
-	case <-mainWindow.quit:
+	case <-gui.quit:
 		log.Println("Closed")
 
 	default:
-		log.Printf("Read error: \n")
-
-		// You can't show dialogs in goroutines
-		glib.IdleAdd(connectToDaemon)
+		if err := scanner.Err(); err != nil && err != io.EOF {
+			fmt.Println("read error:", err)
+		}
 	}
+
+	// TODO: Reset everything
+	gui.server = nil
+	// Wait if the daemon is restarting, then try connecting again
+	time.Sleep(500 * time.Millisecond)
+
+	// IMPORTANT: You can't show dialogs in goroutines
+	glib.IdleAdd(gui.connectToDaemon)
 
 }
 
-func connectToDaemon() {
+func (gui *mainGUI) connectToDaemon() {
 	c, err := net.Dial("unix", consts.UnixSocket)
 	if err != nil {
 
 	firstDialog:
-		msgDialog := gtk.MessageDialogNew(mainWindow.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
+		msgDialog := gtk.MessageDialogNew(gui.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
 			gtk.BUTTONS_YES_NO, "Vodga daemon is not running, do you want to start it?")
 		response := msgDialog.Run()
 		msgDialog.Destroy()
 		if response == gtk.RESPONSE_YES {
 			cmd := exec.Command("systemctl", "start", "vodga.service")
 			if err := cmd.Start(); err != nil {
-				log.Fatalf("cmd.Start: %v")
+				log.Fatalf("cmd.Run: %v", err)
 			}
 
 			if err := cmd.Wait(); err != nil {
 				if _, ok := err.(*exec.ExitError); ok {
-					msgDialog2 := gtk.MessageDialogNew(mainWindow.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
+					msgDialog2 := gtk.MessageDialogNew(gui.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
 						gtk.BUTTONS_OK, "Cannot start the daemon")
 					msgDialog2.Run()
 					msgDialog2.Destroy()
+
+					// Start over
 					goto firstDialog
+
 				} else {
 					log.Fatalf("cmd.Wait: %v", err)
 				}
 			}
 		} else {
-			mainWindow.window.Close()
+			gui.window.Close()
 			return
 		}
 	}
-	mainWindow.server = c
-	go listenToDaemon()
+	gui.server = c
+	go gui.listenToDaemon()
 }
 
-func initWidgets() {
+func (gui *mainGUI) initWidgets() {
 	statusIcon, err := gtk_deprecated.StatusIconNewFromIconName("gtk-disconnect")
 	if err != nil {
 		log.Fatalf("Error: Cannot create tray icon")
 	}
-	mainWindow.trayIcon = statusIcon
+	gui.trayIcon = statusIcon
 
 	menu, err := gtk.MenuNew()
 	if err != nil {
@@ -144,46 +178,39 @@ func initWidgets() {
 	}
 	defer menu.ShowAll()
 
-	mainWindow.trayMenu = menu
+	gui.trayMenu = menu
 
 	menuItemExit, err := gtk.MenuItemNewWithLabel("Exit")
 	if err != nil {
 		log.Fatalf("Error: Cannot create tray menu")
 	}
 
-	if _, err = menuItemExit.Connect("activate", func() {
+	_, _ = menuItemExit.Connect("activate", func() {
 		gtk.MainQuit()
-	}); err != nil {
-		log.Fatalf("Error: Cannot connect menu item")
-	}
+	})
 
-	mainWindow.trayMenuItem = menuItemExit
-	mainWindow.trayMenu.Append(mainWindow.trayMenuItem)
-	if _, err = mainWindow.trayIcon.Connect("activate", func() {
-		if !mainWindow.window.IsVisible() {
-			mainWindow.window.SetVisible(true)
-		} else if !mainWindow.window.IsActive() {
-			mainWindow.window.Present()
+	gui.trayMenuItem = menuItemExit
+	gui.trayMenu.Append(gui.trayMenuItem)
+	_, _ = gui.trayIcon.Connect("activate", func() {
+		if !gui.window.IsVisible() {
+			gui.window.SetVisible(true)
+		} else if !gui.window.IsActive() {
+			gui.window.Present()
 		} else {
-			mainWindow.window.SetVisible(false)
+			gui.window.SetVisible(false)
 		}
-	}); err != nil {
-		log.Fatalf("Error: Cannot connect menu item")
-	}
+	})
 
-	_, err = mainWindow.trayIcon.Connect("popup_menu",
+	_, _ = gui.trayIcon.Connect("popup_menu",
 		func(icon interface{}, a uint, b uint32) {
-			mainWindow.trayIcon.PopupMenu(mainWindow.trayMenu, a, b)
-		})
-
-	if err != nil {
-		log.Fatalf("Error: Cannot connect tray popup menu")
-	}
+			gui.trayIcon.PopupMenu(gui.trayMenu, a, b)
+		},
+	)
 }
 
-func showMainWindow() {
-	if mainWindow.window == nil {
+func (gui *mainGUI) showMainWindow() {
+	if gui.window == nil {
 		log.Fatalf("Error: Main window is not initialized")
 	}
-	mainWindow.window.ShowAll()
+	gui.window.ShowAll()
 }
