@@ -20,7 +20,7 @@
             <property name="homogeneous">True</property>
             <property name="layout_style">expand</property>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="btn_add_config">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>

@@ -30,7 +30,8 @@ type Daemon struct {
 func NewDaemon() *Daemon {
 	instance := &Daemon{}
 	instance.quit = make(chan struct{})
-	instance.openvpn = Openvpn{connected: false, bytesIn: 0, bytesOut: 0}
+	instance.openvpn = Openvpn{connected: false, bytesIn: 0, bytesOut: 0,
+		totalIn: 0, totalOut: 0}
 
 	ln, err := net.Listen("unix", consts.UnixSocket)
 	if err != nil {
@@ -38,7 +39,7 @@ func NewDaemon() *Daemon {
 	}
 	instance.ln = ln
 
-	// Make the socket accessible to users other than root
+	// Make the socket accessible to all users
 	if err := os.Chmod(consts.UnixSocket, os.FileMode(0777)); err != nil {
 		log.Fatalf("Failed to set socket permissions: %v", err)
 	}
@@ -98,6 +99,7 @@ func (d *Daemon) daemonServer(c net.Conn, id int) {
 			continue
 		}
 
+		//TODO: Remove this later , or use it for --verbose flag
 		log.Printf("Client %d: %s\n", id, text)
 		msg, err := messages.UnmarshalMsg(text)
 		if err != nil {
@@ -112,7 +114,6 @@ func (d *Daemon) daemonServer(c net.Conn, id int) {
 	}
 	log.Printf("Client #%d disconnected\n", id)
 }
-
 
 func (d *Daemon) stopServer(c net.Conn) {
 	close(d.quit)
@@ -362,8 +363,9 @@ func (d *Daemon) processMgmtCommand(cmd string, c net.Conn) {
 		if len(inout) < 2 {
 			return
 		}
-		in, _ := strconv.Atoi(inout[0])
-		out, _ := strconv.Atoi(inout[1])
+
+		in, _ := strconv.ParseUint(inout[0], 10, 64)
+		out, _ := strconv.ParseUint(inout[1], 10, 64)
 		d.openvpn.totalIn += in - d.openvpn.bytesIn
 		d.openvpn.totalOut += out - d.openvpn.bytesOut
 		d.openvpn.bytesIn = in

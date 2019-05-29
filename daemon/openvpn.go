@@ -13,10 +13,10 @@ type Openvpn struct {
 	process   *exec.Cmd
 	connected bool
 	state     string
-	bytesIn   int
-	bytesOut  int
-	totalIn   int
-	totalOut  int
+	bytesIn   uint64
+	bytesOut  uint64
+	totalIn   uint64
+	totalOut  uint64
 }
 
 func (o *Openvpn) closeConnection() error {

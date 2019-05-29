@@ -5,8 +5,9 @@ import (
 	"errors"
 	"github.com/TheWeirdDev/Vodga/shared"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
+	"github.com/TheWeirdDev/Vodga/shared/utils"
+	"log"
 	"net"
-	"strconv"
 )
 
 type Message struct {
@@ -14,26 +15,26 @@ type Message struct {
 	Args    map[string]string `json:"args"`
 }
 
-func SendMessage(msg *Message, c net.Conn) error {
+func SendMessage(msg *Message, c net.Conn) {
 	data, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		log.Fatalf("Can't marshal message")
 	}
 	data = append(data, '\n')
 	_, err = c.Write(data)
-	return err
+	if err != nil {
+		log.Fatalf("Can't send message")
+	}
 }
 
 func SimpleMsg(cmd string) *Message {
 	return &Message{Command: cmd}
 }
 
-func BytecountMsg(in, out, tin, tout int) *Message {
+func BytecountMsg(in, out, tin, tout uint64) *Message {
+	i, o, ti, to := utils.BytecountToString(in, out, tin, tout)
 	bytecount := map[string]string{
-		"in":   strconv.Itoa(in),
-		"out":  strconv.Itoa(out),
-		"tin":  strconv.Itoa(tin),
-		"tout": strconv.Itoa(tout),
+		"in": i, "out": o, "tin": ti, "tout": to,
 	}
 
 	return &Message{Command: consts.MsgByteCount,
@@ -62,7 +63,7 @@ func ConnectMsg(cfgPath string, auth shared.Auth, creds ...string) *Message {
 	msg := &Message{Command: consts.MsgConnect}
 	if auth == shared.USER_PASS {
 		msg.Args = map[string]string{"config": cfgPath, "auth": consts.AuthUserPass,
-		"username": creds[0], "password": creds[1]}
+			"username": creds[0], "password": creds[1]}
 	}
 	return msg
 }

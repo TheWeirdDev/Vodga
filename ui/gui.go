@@ -57,6 +57,10 @@ func (gui *mainGUI) Run() {
 
 	})
 
+	addCfgBtn , _ := (*utils.GetWidget(builder, "btn_add_config")).(*gtk.Button)
+	_, _ = addCfgBtn.Connect("clicked", func() {
+
+	})
 	_, _ = window.Connect("destroy", func() {
 		close(gui.quit)
 		if gui.server != nil {
@@ -67,13 +71,11 @@ func (gui *mainGUI) Run() {
 	})
 
 	go func() {
+		// Check for bandwidth usage every 1 second
 		tck := time.Tick(time.Second)
 		for range tck {
 			if gui.server != nil && gui.state == consts.StateCONNECTED {
-				err := messages.SendMessage(messages.GetBytecountMsg(), gui.server)
-				if err != nil {
-					log.Printf("Error: %v\n", err)
-				}
+				messages.SendMessage(messages.GetBytecountMsg(), gui.server)
 			}
 		}
 	}()
@@ -88,9 +90,15 @@ func (gui *mainGUI) listenToDaemon() {
 		if err != nil {
 			log.Printf("Error unmarshaling the message: %v\n", err)
 		}
+
 		switch msg.Command {
 		case consts.MsgByteCount:
-		//TODO: Finish this
+			//TODO: Finish this
+			in, out, tin, tout := utils.BytecountToUint(msg.Args["in"], msg.Args["out"],
+				msg.Args["tin"], msg.Args["tout"])
+
+			fmt.Println("Got bytecount:", utils.FormatSize(in), utils.FormatSize(out),
+				utils.FormatSize(tin), utils.FormatSize(tout))
 
 		case consts.MsgStateChanged:
 			state, ok := msg.Args["state"]
@@ -99,11 +107,14 @@ func (gui *mainGUI) listenToDaemon() {
 				break
 			}
 			gui.state = state
-			//TODO: Update state text
+			//TODO: Update the program status
+			fmt.Println("Got state:", state)
+
 		case consts.MsgDisconnected:
 			//TODO: Update text
 		case consts.MsgError:
 			// TODO: Show error
+			fmt.Println("Got error")
 		}
 
 	}
@@ -113,7 +124,7 @@ func (gui *mainGUI) listenToDaemon() {
 
 	default:
 		if err := scanner.Err(); err != nil && err != io.EOF {
-			fmt.Println("read error:", err)
+			log.Printf("Read error: %v", err)
 		}
 	}
 
