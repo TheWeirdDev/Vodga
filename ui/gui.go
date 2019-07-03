@@ -18,7 +18,7 @@ import (
 
 type mainGUI struct {
 	builder      *gtk.Builder
-	window       *gtk.Window
+	window       *gtk.ApplicationWindow
 	trayIcon     *gtk_deprecated.StatusIcon
 	trayMenu     *gtk.Menu
 	trayMenuItem *gtk.MenuItem
@@ -46,7 +46,7 @@ func (gui *mainGUI) Run() {
 	}
 	gui.builder = builder
 
-	window, ok := (*utils.GetWidget(builder, "main_window")).(*gtk.Window)
+	window, ok := (*utils.GetWidget(builder, "main_window")).(*gtk.ApplicationWindow)
 	if !ok {
 		log.Fatalf("Error: GtkWindow not found")
 	}
@@ -57,10 +57,30 @@ func (gui *mainGUI) Run() {
 
 	})
 
-	addCfgBtn , _ := (*utils.GetWidget(builder, "btn_add_config")).(*gtk.Button)
-	_, _ = addCfgBtn.Connect("clicked", func() {
+	menu := glib.MenuNew()
+	addInd := glib.MenuItemNew("Add Individual config","win.addInd")
+	addProvider := glib.MenuItemNew("Add Provider configs","win.addProvider")
 
+	submenu := glib.MenuNew()
+	exportConfigs := glib.MenuItemNew("Export configs","win.exportConfigs")
+	importConfigs := glib.MenuItemNew("Import configs","win.importConfigs")
+	submenu.AppendItem(exportConfigs)
+	submenu.AppendItem(importConfigs)
+	importExport := glib.MenuItemNewSubmenu("Import/Export", &submenu.MenuModel)
+
+	menu.AppendItem(addInd)
+	menu.AppendItem(addProvider)
+	menu.AppendItem(importExport)
+
+	importAction := glib.SimpleActionNew("addInd", nil)
+	importAction.Connect("activate", func() {
+		//TODO: import
 	})
+	gui.window.AddAction(importAction)
+
+	importBtn , _ := (*utils.GetWidget(builder, "btn_import")).(*gtk.MenuButton)
+	importBtn.SetMenuModel(&menu.MenuModel)
+
 	_, _ = window.Connect("destroy", func() {
 		close(gui.quit)
 		if gui.server != nil {
@@ -121,6 +141,7 @@ func (gui *mainGUI) listenToDaemon() {
 	select {
 	case <-gui.quit:
 		log.Println("Closed")
+		return
 
 	default:
 		if err := scanner.Err(); err != nil && err != io.EOF {
@@ -172,6 +193,7 @@ func (gui *mainGUI) connectToDaemon() {
 			return
 		}
 	}
+	log.Println("Connected to daemon")
 	gui.server = c
 	go gui.listenToDaemon()
 }

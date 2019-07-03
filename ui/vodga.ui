@@ -2,12 +2,10 @@
 <!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
-  <object class="GtkWindow" id="main_window">
+  <object class="GtkApplicationWindow" id="main_window">
     <property name="can_focus">False</property>
-    <property name="window_position">center</property>
-    <property name="default_width">700</property>
+    <property name="default_width">800</property>
     <property name="default_height">400</property>
-    <property name="gravity">center</property>
     <child type="titlebar">
       <object class="GtkHeaderBar">
         <property name="visible">True</property>
@@ -20,26 +18,6 @@
             <property name="homogeneous">True</property>
             <property name="layout_style">expand</property>
             <child>
-              <object class="GtkButton" id="btn_add_config">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="always_show_image">True</property>
-                <child>
-                  <object class="GtkImage">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="stock">gtk-add</property>
-                  </object>
-                </child>
-              </object>
-              <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
               <object class="GtkButton">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -49,6 +27,26 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="stock">gtk-dialog-authentication</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="pack_type">end</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkMenuButton" id="btn_import">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="stock">gtk-add</property>
                   </object>
                 </child>
               </object>
@@ -97,11 +95,8 @@
                         <property name="can_focus">False</property>
                         <property name="halign">center</property>
                         <property name="valign">center</property>
-                        <property name="margin_left">10</property>
-                        <property name="margin_right">10</property>
                         <property name="margin_top">10</property>
                         <property name="margin_bottom">10</property>
-                        <property name="pixbuf">../../../../../../Downloads/Luxembourg.png</property>
                       </object>
                       <packing>
                         <property name="expand">True</property>
@@ -138,11 +133,7 @@
                             <property name="height_request">40</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="has_focus">True</property>
-                            <property name="is_focus">True</property>
                             <property name="receives_default">True</property>
-                            <property name="margin_left">10</property>
-                            <property name="margin_right">10</property>
                             <property name="margin_top">10</property>
                             <property name="margin_bottom">10</property>
                             <style>
@@ -187,8 +178,6 @@
                   <object class="GtkGrid">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="margin_left">30</property>
-                    <property name="margin_right">30</property>
                     <property name="row_homogeneous">True</property>
                     <property name="column_homogeneous">True</property>
                     <child>
@@ -200,7 +189,6 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">10</property>
                             <property name="margin_top">5</property>
                             <property name="margin_bottom">5</property>
                             <property name="label" translatable="yes">Download: XX.x MB</property>
@@ -215,7 +203,6 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">10</property>
                             <property name="margin_top">5</property>
                             <property name="margin_bottom">5</property>
                             <property name="label" translatable="yes">Upload: XX.x MB</property>
@@ -230,7 +217,6 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">10</property>
                             <property name="margin_top">5</property>
                             <property name="margin_bottom">5</property>
                             <property name="label" translatable="yes">Total DL: XX.x GB</property>
@@ -245,7 +231,6 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">10</property>
                             <property name="margin_top">5</property>
                             <property name="margin_bottom">5</property>
                             <property name="label" translatable="yes">Total UP: XX.x MB</property>
@@ -271,7 +256,6 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">10</property>
                             <property name="margin_top">5</property>
                             <property name="margin_bottom">5</property>
                             <property name="label" translatable="yes">DL Speed: XX.x KB/s</property>
@@ -286,7 +270,6 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">10</property>
                             <property name="margin_top">5</property>
                             <property name="margin_bottom">5</property>
                             <property name="label" translatable="yes">UP Speed XX.x KB/s</property>
@@ -301,7 +284,6 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">10</property>
                             <property name="margin_top">5</property>
                             <property name="margin_bottom">5</property>
                             <property name="label" translatable="yes">Uptime: X Min Y Sec</property>
@@ -316,7 +298,6 @@
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="margin_left">10</property>
                             <property name="margin_top">5</property>
                             <property name="margin_bottom">5</property>
                             <property name="label" translatable="yes">Location: Luxembourg</property>
