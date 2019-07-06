@@ -57,19 +57,6 @@ func (v *StatusIcon) native() *C.GtkStatusIcon {
 	return C.toGtkStatusIcon(p)
 }
 
-// TODO: GtkStatusIcon * gtk_status_icon_new_from_gicon (GIcon *icon);
-// TODO: void gtk_status_icon_set_from_gicon (GtkStatusIcon *status_icon, GIcon *icon);
-
-// TODO: GIcon * gtk_status_icon_get_gicon (GtkStatusIcon *status_icon);
-
-// TODO: void gtk_status_icon_set_screen (GtkStatusIcon *status_icon, GdkScreen *screen);
-// TODO: GdkScreen * gtk_status_icon_get_screen (GtkStatusIcon *status_icon);
-
-// TODO: GdkPixbuf * gtk_status_icon_get_pixbuf (GtkStatusIcon *status_icon);
-
-// TODO: void gtk_status_icon_position_menu (GtkMenu *menu, gint *x, gint *y, gboolean *push_in, gpointer user_data);
-// TODO: gboolean gtk_status_icon_get_geometry (GtkStatusIcon *status_icon, GdkScreen **screen, GdkRectangle *area, GtkOrientation *orientation);
-
 // StatusIconNew is a wrapper around gtk_status_icon_new()
 func StatusIconNew() (*StatusIcon, error) {
 	c := C.gtk_status_icon_new()
