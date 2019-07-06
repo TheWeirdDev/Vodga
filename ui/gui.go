@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"os/exec"
 	"time"
 )
@@ -186,6 +187,7 @@ func (gui *mainGUI) connectToDaemon() {
 			}
 		} else {
 			gui.window.Close()
+			os.Exit(0)
 			return
 		}
 	}
