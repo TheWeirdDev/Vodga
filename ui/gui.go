@@ -81,13 +81,9 @@ func (gui *mainGUI) Run() {
 	importBtn , _ := (*utils.GetWidget(builder, "btn_import")).(*gtk.MenuButton)
 	importBtn.SetMenuModel(&menu.MenuModel)
 
-	_, _ = window.Connect("destroy", func() {
-		close(gui.quit)
-		if gui.server != nil {
-			gui.server.Close()
-		}
-		time.Sleep(20 * time.Millisecond)
-		gtk.MainQuit()
+	_, _ = window.Connect("delete-event", func() bool {
+		window.Hide()
+		return true
 	})
 
 	go func() {
@@ -219,6 +215,11 @@ func (gui *mainGUI) initWidgets() {
 	}
 
 	_, _ = menuItemExit.Connect("activate", func() {
+		close(gui.quit)
+		if gui.server != nil {
+			gui.server.Close()
+		}
+		time.Sleep(20 * time.Millisecond)
 		gtk.MainQuit()
 	})
 

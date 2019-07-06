@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:38ab73678fdc04f41629b1dfbfc5a9be3efbf8b80af1518e5493bd167bf16faa"
+  digest = "1:b5ac9ed79a83cdc7f69442236764aa4d42acdb00db3dfe27145072b9c7136b9d"
   name = "github.com/gotk3/gotk3"
   packages = [
     "cairo",
@@ -13,7 +13,7 @@
     "pango",
   ]
   pruneopts = "UT"
-  revision = "ff571eb317acbd4ddf053319cf5e5f042dcefa43"
+  revision = "6dcdf9e5c51e982e099eea798c95faea42def17d"
 
 [[projects]]
   digest = "1:e5f4d2be19e2ebab13b8e4248792e1841518fd728cd73b042ee4a5630796bb37"
@@ -24,23 +24,23 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:07e8589503b7ec22430dae6eed6f2c17e4249ab245574f4fd0ba8fc9c597d138"
+  digest = "1:8186cc518f5dcea736d7725e284632937971fdf29fa2953fdfa53f631e21a799"
   name = "github.com/oschwald/maxminddb-golang"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c5bec84d1963260297932a1b7a1753c8420717a7"
-  version = "v1.3.0"
+  revision = "2905694a1b00c5574f1418a7dbf8a22a7d247559"
+  version = "v1.3.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:a63ab7381e8941204bf91ce0bbdcb9f47767de756f98209a6a059dcbd52d57b6"
+  digest = "1:afb5346f71acefc3da7ad800f952cb2bcdb762194b05304bbf54d7f9490e31c5"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "cab07311ab81fc7f180fddf7410b604373b20a00"
+  revision = "04f50cda93cbb67f2afa353c52f342100e80e625"
 
 [solve-meta]
   analyzer-name = "dep"

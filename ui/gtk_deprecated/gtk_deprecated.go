@@ -1,5 +1,7 @@
 package gtk_deprecated
 
+// #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+// #cgo CFLAGS: -Wdeprecated-declarations
 // #cgo pkg-config: gdk-3.0 gio-2.0 glib-2.0 gobject-2.0 gtk+-3.0
 // #include <stdlib.h>
 // #include <gtk/gtk.h>

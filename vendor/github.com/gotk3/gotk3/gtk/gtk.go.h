@@ -430,6 +430,12 @@ toGtkCellRendererPixbuf(void *p)
 	return (GTK_CELL_RENDERER_PIXBUF(p));
 }
 
+static GtkCellRendererProgress *
+toGtkCellRendererProgress(void *p)
+{
+    return (GTK_CELL_RENDERER_PROGRESS(p));
+}
+
 static GtkCellRendererText *
 toGtkCellRendererText(void *p)
 {
@@ -926,4 +932,18 @@ extern gboolean goTreeModelFilterFuncs (GtkTreeModel *model, GtkTreeIter *iter, 
 
 static inline void _gtk_tree_model_filter_set_visible_func(GtkTreeModelFilter *filter, gpointer user_data) {
     gtk_tree_model_filter_set_visible_func(filter, (GtkTreeModelFilterVisibleFunc)(goTreeModelFilterFuncs), user_data, NULL);
+}
+
+static inline void _gtk_text_buffer_insert_with_tag_by_name(GtkTextBuffer* buffer, GtkTextIter* iter, const gchar* text, gint len, const gchar* first_tag_name) {
+	gtk_text_buffer_insert_with_tags_by_name(buffer, iter, text, len, first_tag_name, NULL);
+}
+
+static inline void _gtk_text_buffer_insert_with_tag(GtkTextBuffer* buffer, GtkTextIter* iter, const gchar* text, gint len, GtkTextTag* tag) {
+	gtk_text_buffer_insert_with_tags(buffer, iter, text, len, tag, NULL);
+}
+
+extern gint goTreeSortableSortFuncs(GtkTreeModel *model, GtkTreeIter *a, GtkTreeIter *b, gpointer data);
+
+static inline void _gtk_tree_sortable_set_sort_func(GtkTreeSortable *sortable, gint sort_column_id, gpointer user_data) {
+    gtk_tree_sortable_set_sort_func(sortable, sort_column_id, (GtkTreeIterCompareFunc)(goTreeSortableSortFuncs), user_data, NULL);
 }

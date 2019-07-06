@@ -1,11 +1,14 @@
 package consts
 
 const (
-	UIFilePath    = "/home/alireza/go/src/github.com/TheWeirdDev/Vodga/ui/vodga.ui"
-	GeoIPDataBase = "/home/alireza/Downloads/GeoLite2-City.mmdb"
+	//TODO: Change These!
+	UIFilePath    = "/home/alireza/go/src/github.com/TheWeirdDev/Vodga/ui/data/vodga.ui"
+	AddSingelUI   = "/home/alireza/go/src/github.com/TheWeirdDev/Vodga/ui/data/add_single.ui"
+	GeoIPDataBase = "/home/alireza/Downloads/GeoLite2-Country.mmdb"
 	UnixSocket    = "/tmp/vodgad.sock"
 	MgmtSocket    = "/tmp/vodgad_mgmt.sock"
 	UnknownCmd    = "UNKNOWN_COMMAND"
+	IPRegex       = "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
 )
 
 const (
