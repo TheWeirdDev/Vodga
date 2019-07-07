@@ -31,9 +31,12 @@ func TestGetConfig(t *testing.T){
 		if cfg.remotes[0].hostname != "freedome-at-gw.freedome-vpn.net"{
 			t.Errorf("Test #1 failed: hostname mismatch")
 		}
-		match, _ := regexp.MatchString("188\\.172\\.220\\.(70|71|69)", cfg.remotes[0].ip)
+		match, _ := regexp.MatchString("^188\\.172\\.220\\.(70|71|69)$", cfg.remotes[0].ip)
 		if !match {
 			t.Errorf("Test #1 failed: ip mismatch")
 		}
+	}
+	if cfg.random {
+		t.Errorf("Test #1 failed: random should be false")
 	}
 }

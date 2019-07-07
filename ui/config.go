@@ -47,7 +47,7 @@ func getProto(p string) Proto {
 		return ""
 	}
 }
-func getRemote(line string, db *geoip2.Reader) (remote, error){
+func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	rmt := remote{}
 	// If you are using strings that may be invalid, check that ip is not nil
 	fields := strings.Fields(line)
@@ -68,7 +68,7 @@ func getRemote(line string, db *geoip2.Reader) (remote, error){
 		}
 		ip = ips[0]
 	} else {
-		ip =  net.ParseIP(fields[1])
+		ip = net.ParseIP(fields[1])
 	}
 	rmt.ip = ip.String()
 
@@ -103,6 +103,7 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 
 	cfg := config{}
 	cfg.data = ""
+	isClient := false
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
@@ -113,19 +114,24 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 				return config{}, err
 			}
 			cfg.remotes = append(cfg.remotes, rmt)
-		}
-		if match, _ := regexp.MatchString("^proto\\s+", text); match {
+		} else if match, _ := regexp.MatchString("^proto\\s+", text); match {
 			fields := strings.Fields(text)
 			if len(fields) < 2 {
 				return config{}, errors.New("unknown proto option")
 			}
 			cfg.proto = getProto(fields[1])
+		} else if text == "remote-random" {
+			cfg.random = true
+		} else if text == "client" {
+			isClient = true
 		}
-		//TODO: Needs more
+	}
+	if !isClient {
+		return config{}, errors.New("not a client configuration (no 'client' option found)")
 	}
 	cfg.path = file
 	if cfg.proto != "" {
-		for i := 0; i < len(cfg.remotes); i++ {
+		for i := range cfg.remotes {
 			rmt := &cfg.remotes[i]
 			if rmt.proto == "" {
 				rmt.proto = cfg.proto
@@ -142,7 +148,9 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	if len(cfg.remotes) == 0 || cfg.proto == "" {
 		return config{}, errors.New("no remote or proto specified")
 	}
-
+	if len(cfg.remotes) == 1 && cfg.random {
+		cfg.random = false
+	}
 	if err := scanner.Err(); err != nil {
 		return config{}, err
 	}
