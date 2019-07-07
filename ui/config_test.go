@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"github.com/oschwald/geoip2-golang"
 	"regexp"
@@ -16,7 +15,7 @@ func TestGetConfig(t *testing.T){
 	defer db.Close()
 
 	cfg,err := getConfig("config_test.ovpn", db)
-	fmt.Printf("Got config: %v", cfg)
+
 	if err != nil {
 		t.Errorf("Test #1 failed: %v", err.Error())
 	}

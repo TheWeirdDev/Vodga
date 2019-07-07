@@ -78,7 +78,7 @@ func getRemote(line string, db *geoip2.Reader) (remote, error){
 	}
 	rmt.country = record.Country.Names["en"]
 	rmt.countryIso = record.Country.IsoCode
-	if len(fields) >= 2 {
+	if len(fields) >= 3 {
 		port, err := strconv.ParseUint(fields[2], 10, 32)
 		if err != nil {
 			return remote{}, err
@@ -86,7 +86,7 @@ func getRemote(line string, db *geoip2.Reader) (remote, error){
 		rmt.port = uint(port)
 	}
 
-	if len(fields) >= 3 {
+	if len(fields) >= 4 {
 		rmt.proto = getProto(fields[3])
 		if rmt.proto == "" {
 			return remote{}, errors.New("unknown protocol")
@@ -102,10 +102,11 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	defer f.Close()
 
 	cfg := config{}
-
+	cfg.data = ""
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
+		cfg.data += text + "\n"
 		if match, _ := regexp.MatchString("^remote\\s+", text); match {
 			rmt, err := getRemote(text, db)
 			if err != nil {
@@ -124,7 +125,8 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	}
 	cfg.path = file
 	if cfg.proto != "" {
-		for _, rmt := range cfg.remotes {
+		for i := 0; i < len(cfg.remotes); i++ {
+			rmt := &cfg.remotes[i]
 			if rmt.proto == "" {
 				rmt.proto = cfg.proto
 			}
