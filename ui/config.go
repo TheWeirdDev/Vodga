@@ -47,12 +47,12 @@ func getProto(p string) Proto {
 		return ""
 	}
 }
-func getRemote(line string, db geoip2.Reader) (remote, error){
+func getRemote(line string, db *geoip2.Reader) (remote, error){
 	rmt := remote{}
 	// If you are using strings that may be invalid, check that ip is not nil
 	fields := strings.Fields(line)
 	if len(fields) < 2 {
-		return rmt, errors.New("Unknown remote option")
+		return rmt, errors.New("unknown remote option")
 	}
 	isIP, err := regexp.MatchString(consts.IPRegex, fields[1])
 	if err != nil {
@@ -89,12 +89,12 @@ func getRemote(line string, db geoip2.Reader) (remote, error){
 	if len(fields) >= 3 {
 		rmt.proto = getProto(fields[3])
 		if rmt.proto == "" {
-			return remote{}, errors.New("Unknown protocol")
+			return remote{}, errors.New("unknown protocol")
 		}
 	}
 	return rmt, nil
 }
-func getConfig(file string, db geoip2.Reader) (config, error) {
+func getConfig(file string, db *geoip2.Reader) (config, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		log.Fatal(err)
@@ -106,26 +106,39 @@ func getConfig(file string, db geoip2.Reader) (config, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(text, "remote") {
+		if match, _ := regexp.MatchString("^remote\\s+", text); match {
 			rmt, err := getRemote(text, db)
 			if err != nil {
 				return config{}, err
 			}
 			cfg.remotes = append(cfg.remotes, rmt)
 		}
-		if strings.HasPrefix(text, "proto") {
+		if match, _ := regexp.MatchString("^proto\\s+", text); match {
 			fields := strings.Fields(text)
 			if len(fields) < 2 {
-				return config{}, errors.New("Unknown proto option")
+				return config{}, errors.New("unknown proto option")
 			}
 			cfg.proto = getProto(fields[1])
-			for _, rmt := range cfg.remotes {
-				if rmt.proto == "" {
-					rmt.proto = cfg.proto
-				}
-			}
 		}
 		//TODO: Needs more
+	}
+	cfg.path = file
+	if cfg.proto != "" {
+		for _, rmt := range cfg.remotes {
+			if rmt.proto == "" {
+				rmt.proto = cfg.proto
+			}
+		}
+	} else {
+		for _, rmt := range cfg.remotes {
+			if rmt.proto != "" {
+				cfg.proto = rmt.proto
+				break
+			}
+		}
+	}
+	if len(cfg.remotes) == 0 || cfg.proto == "" {
+		return config{}, errors.New("no remote or proto specified")
 	}
 
 	if err := scanner.Err(); err != nil {
