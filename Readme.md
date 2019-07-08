@@ -8,6 +8,10 @@ Vodga is an **OpenVPN** client for linux with a GUI (Gtk+) and a CLI, written in
 - [x] A working daemon
 - [ ] the CLI
 - [ ] the GUI 
+
+## Discussion
+if you want to discuss anything about Vodga, post it on the [Vodga subreddit](https://www.reddit.com/r/Vodga)
+
  
 ## License
 
