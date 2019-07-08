@@ -2,7 +2,7 @@
 
 Vodga is an **OpenVPN** client for linux with a GUI (Gtk+) and a CLI, written in Go.
 
-### **Vodga is not ready yet, but it's under development.**
+**Vodga is not ready yet, but it's under development.**
 
 ### ToDo
 - [x] A working daemon
