@@ -3,9 +3,10 @@ package ui
 import (
 	"bufio"
 	"errors"
+	"fmt"
+	"github.com/TheWeirdDev/Vodga/shared/auth"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"github.com/oschwald/geoip2-golang"
-	"log"
 	"net"
 	"os"
 	"regexp"
@@ -35,6 +36,7 @@ type config struct {
 	random  bool
 	data    string
 	proto   Proto
+	creds   auth.Credentials
 }
 
 func getProto(p string) Proto {
@@ -94,27 +96,65 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	}
 	return rmt, nil
 }
+
+func readCredentials(line string) (auth.Credentials, error) {
+	fields := strings.Fields(line)
+	if len(fields) < 2 {
+		return auth.Credentials{Auth: auth.USER_PASS}, nil
+	}
+	f, err := os.Open(fields[1])
+	if err != nil {
+		return auth.Credentials{}, err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	var creds []string
+
+	for scanner.Scan() {
+		if len(creds) >= 2 {
+			break
+		}
+		text := scanner.Text()
+		creds = append(creds, text)
+	}
+	if err := scanner.Err(); err != nil {
+		return auth.Credentials{}, err
+	}
+	switch len(creds) {
+	case 0:
+		return auth.Credentials{Auth: auth.USER_PASS}, nil
+	case 1:
+		return auth.Credentials{Auth: auth.USER_PASS, Username: creds[0], Password: ""}, nil
+	case 2:
+		return auth.Credentials{Auth: auth.USER_PASS, Username: creds[0], Password: creds[1]}, nil
+	default:
+		return auth.Credentials{}, errors.New("unknown error while reading the credentials")
+	}
+}
+
 func getConfig(file string, db *geoip2.Reader) (config, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		log.Fatal(err)
+		return config{}, err
 	}
 	defer f.Close()
 
 	cfg := config{}
 	cfg.data = ""
+	cfg.creds.Auth = auth.NO_AUTH
 	isClient := false
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		cfg.data += text + "\n"
-		if match, _ := regexp.MatchString("^remote\\s+", text); match {
+		if match, _ := regexp.MatchString("^remote\\s+.+$", text); match {
 			rmt, err := getRemote(text, db)
 			if err != nil {
 				return config{}, err
 			}
 			cfg.remotes = append(cfg.remotes, rmt)
-		} else if match, _ := regexp.MatchString("^proto\\s+", text); match {
+		} else if match, _ := regexp.MatchString("^proto\\s+.+$", text); match {
 			fields := strings.Fields(text)
 			if len(fields) < 2 {
 				return config{}, errors.New("unknown proto option")
@@ -124,8 +164,22 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 			cfg.random = true
 		} else if text == "client" {
 			isClient = true
+		} else if text == "auth-user-pass" {
+			cfg.creds.Auth = auth.USER_PASS
+			cfg.creds.Username = ""
+			cfg.creds.Password = ""
+		} else if match, _ := regexp.MatchString("^auth-user-pass\\s+.+$", text); match {
+			if creds, err := readCredentials(text); err != nil {
+				return config{}, fmt.Errorf("unable to read the credentials: %v", err)
+			} else {
+				cfg.creds = creds
+			}
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return config{}, err
+	}
+
 	if !isClient {
 		return config{}, errors.New("not a client configuration (no 'client' option found)")
 	}
@@ -150,9 +204,6 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	}
 	if len(cfg.remotes) == 1 && cfg.random {
 		cfg.random = false
-	}
-	if err := scanner.Err(); err != nil {
-		return config{}, err
 	}
 	return cfg, nil
 }

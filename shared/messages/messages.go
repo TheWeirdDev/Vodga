@@ -3,7 +3,7 @@ package messages
 import (
 	"encoding/json"
 	"errors"
-	"github.com/TheWeirdDev/Vodga/shared"
+	"github.com/TheWeirdDev/Vodga/shared/auth"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"github.com/TheWeirdDev/Vodga/shared/utils"
 	"log"
@@ -59,9 +59,9 @@ func UnmarshalMsg(text string) (*Message, error) {
 	return msg, err
 }
 
-func ConnectMsg(cfgPath string, auth shared.Auth, creds ...string) *Message {
+func ConnectMsg(cfgPath string, authMethod auth.Auth, creds ...string) *Message {
 	msg := &Message{Command: consts.MsgConnect}
-	if auth == shared.USER_PASS {
+	if authMethod == auth.USER_PASS {
 		msg.Args = map[string]string{"config": cfgPath, "auth": consts.AuthUserPass,
 			"username": creds[0], "password": creds[1]}
 	}

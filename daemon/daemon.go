@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/TheWeirdDev/Vodga/shared"
+	"github.com/TheWeirdDev/Vodga/shared/auth"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"github.com/TheWeirdDev/Vodga/shared/messages"
 	"log"
@@ -266,7 +266,7 @@ func (d *Daemon) resetOpenvpn() {
 	d.openvpn.bytesIn = 0
 	d.openvpn.connected = false
 	d.openvpn.state = ""
-	d.openvpn.creds = shared.Credentials{}
+	d.openvpn.creds = auth.Credentials{}
 }
 
 func (d *Daemon) broadcastMessage(msg *messages.Message) {
@@ -284,15 +284,15 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 			messages.SendMessage(messages.ErrorMsg("Config is needed to start openvpn"), c)
 			return errors.New("no config was given")
 		}
-		auth, ok := msg.Args["auth"]
+		authMethod, ok := msg.Args["authMethod"]
 		if !ok {
 			messages.SendMessage(messages.ErrorMsg("Auth method is needed to start openvpn"), c)
-			return errors.New("no auth method was given")
+			return errors.New("no authMethod method was given")
 		}
 		d.openvpn.config = config
-		switch auth {
+		switch authMethod {
 		case consts.AuthNoAuth:
-			d.openvpn.creds = shared.Credentials{Auth: shared.NO_AUTH}
+			d.openvpn.creds = auth.Credentials{Auth: auth.NO_AUTH}
 		case consts.AuthUserPass:
 			username, ok := msg.Args["username"]
 			if !ok {
@@ -304,11 +304,11 @@ func (d *Daemon) prepareOpenvpn(msg *messages.Message, c net.Conn) error {
 				messages.SendMessage(messages.ErrorMsg("Password is needed to start openvpn"), c)
 				return errors.New("no config was given")
 			}
-			d.openvpn.creds = shared.Credentials{Auth: shared.USER_PASS, Username: username, Password: password}
+			d.openvpn.creds = auth.Credentials{Auth: auth.USER_PASS, Username: username, Password: password}
 		default:
 			d.resetOpenvpn()
-			messages.SendMessage(messages.ErrorMsg("Unknown auth type"), c)
-			return errors.New("unknown auth type")
+			messages.SendMessage(messages.ErrorMsg("Unknown authMethod type"), c)
+			return errors.New("unknown authMethod type")
 		}
 	} else {
 		messages.SendMessage(messages.ErrorMsg("OpenVPN is already running"), c)

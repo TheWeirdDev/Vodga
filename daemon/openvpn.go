@@ -1,7 +1,7 @@
 package daemon
 
 import (
-	"github.com/TheWeirdDev/Vodga/shared"
+	"github.com/TheWeirdDev/Vodga/shared/auth"
 	"os"
 	"os/exec"
 )
@@ -9,7 +9,7 @@ import (
 
 type Openvpn struct {
 	config    string
-	creds     shared.Credentials
+	creds     auth.Credentials
 	process   *exec.Cmd
 	connected bool
 	state     string
