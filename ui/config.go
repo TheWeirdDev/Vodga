@@ -274,7 +274,7 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	if err := scanner.Err(); err != nil {
 		return config{}, err
 	}
-	if isReadingCa {
+	if isReadingCa || isReadingCert || isReadingKey{
 		return config{}, errors.New("config file is corrupted")
 	}
 	if !isClient {
@@ -296,8 +296,14 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 			}
 		}
 	}
+	if cfg.ca == "" {
+		return config{}, errors.New("no 'ca' option specified")
+	}
+	if (cfg.cert =="" && cfg.key != "") || (cfg.cert !="" && cfg.key == "") {
+		return config{}, errors.New("'cert' and 'key' options must be used together")
+	}
 	if len(cfg.remotes) == 0 || cfg.proto == "" {
-		return config{}, errors.New("no remote or proto specified")
+		return config{}, errors.New("no 'remote' or 'proto' option specified")
 	}
 	if len(cfg.remotes) == 1 && cfg.random {
 		cfg.random = false
