@@ -5,6 +5,7 @@ import (
 	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"github.com/oschwald/geoip2-golang"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -64,5 +65,13 @@ func TestGetConfigWithCredentials(t *testing.T) {
 	if cfg.creds.Username != "test_username" || cfg.creds.Password != "test_password" {
 		t.Errorf("Test #2 failed: wrong credentials")
 	}
-
+	if !strings.Contains(cfg.ca, "TESTTESTTEST") {
+		t.Errorf("Test #2 failed: wrong ca")
+	}
+	if !strings.Contains(cfg.cert, "TESTCERTTESTCERT") {
+		t.Errorf("Test #2 failed: wrong cert")
+	}
+	if !strings.Contains(cfg.key, "TESTKEYTESTKEY") {
+		t.Errorf("Test #2 failed: wrong key")
+	}
 }

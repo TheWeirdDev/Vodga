@@ -7,6 +7,7 @@ import (
 	"github.com/TheWeirdDev/Vodga/shared/auth"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"github.com/oschwald/geoip2-golang"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -35,9 +36,12 @@ type config struct {
 	path    string
 	remotes []remote
 	random  bool
-	data    string
 	proto   Proto
 	creds   auth.Credentials
+	ca      string
+	cert    string
+	key     string
+	other   string
 }
 
 func getProto(p string) Proto {
@@ -139,6 +143,29 @@ func readCredentials(line string, cfgPath string) (auth.Credentials, error) {
 	}
 }
 
+func readCert(line string, cfgPath string) (string, error) {
+	fields := strings.Fields(line)
+	if len(fields) < 2 {
+		return "", nil
+	}
+	f, err := os.Open(fields[1])
+	if err != nil {
+		cfgPath += string(filepath.Separator)
+		f2, err2 := os.Open(cfgPath + fields[1])
+		if err2 != nil {
+			return "", err
+		}
+		f = f2
+	}
+	defer f.Close()
+
+	data, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 func getConfig(file string, db *geoip2.Reader) (config, error) {
 	f, err := os.Open(file)
 	if err != nil {
@@ -146,13 +173,46 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	}
 	defer f.Close()
 
+	dir, err := filepath.Abs(filepath.Dir(file))
+	if err != nil {
+		return config{}, err
+	}
+
 	cfg := config{}
-	cfg.data = ""
+	cfg.other = ""
 	cfg.creds.Auth = auth.NO_AUTH
+
 	isClient := false
+	isReadingCa := false
+	isReadingCert := false
+	isReadingKey := false
+
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
+		if isReadingCa {
+			if text == "</ca>" {
+				isReadingCa = false
+			} else {
+				cfg.ca += text + "\n"
+			}
+			continue
+		} else if isReadingCert {
+			if text == "</cert>" {
+				isReadingCert = false
+			} else {
+				cfg.cert += text + "\n"
+			}
+			continue
+		} else if isReadingKey {
+			if text == "</key>" {
+				isReadingKey = false
+			} else {
+				cfg.key += text + "\n"
+			}
+			continue
+		}
+
 		if match, _ := regexp.MatchString("^remote\\s+.+$", text); match {
 			rmt, err := getRemote(text, db)
 			if err != nil {
@@ -174,27 +234,49 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 			cfg.creds.Username = ""
 			cfg.creds.Password = ""
 		} else if match, _ := regexp.MatchString("^auth-user-pass\\s+.+$", text); match {
-			dir, err := filepath.Abs(filepath.Dir(file))
-			if err != nil {
-				return config{}, err
-			}
 			if creds, err := readCredentials(text, dir); err != nil {
 				return config{}, fmt.Errorf("unable to read the credentials: %v", err)
 			} else {
 				cfg.creds = creds
 			}
 		} else if match, _ := regexp.MatchString("^ca\\s+.+$", text); match {
-			continue
+			if ca, err := readCert(text, dir); err != nil {
+				return config{}, fmt.Errorf("unable to read the ca file: %v", err)
+			} else {
+				cfg.ca = ca
+			}
+		} else if match, _ := regexp.MatchString("^cert\\s+.+$", text); match {
+			if cert, err := readCert(text, dir); err != nil {
+				return config{}, fmt.Errorf("unable to read the cert file: %v", err)
+			} else {
+				cfg.cert = cert
+			}
+		} else if match, _ := regexp.MatchString("^key\\s+.+$", text); match {
+			if key, err := readCert(text, dir); err != nil {
+				return config{}, fmt.Errorf("unable to read the key file: %v", err)
+			} else {
+				cfg.key = key
+			}
+		} else if text == "<ca>" {
+			isReadingCa = true
+		} else if text == "<cert>" {
+			isReadingCert = true
+		} else if text == "<key>" {
+			isReadingKey = true
 		} else {
-			if match, _ := regexp.MatchString("^[#;].*$", text); !match && text != "" {
-				cfg.data += text + "\n"
+			comment, _ := regexp.MatchString("^[#;].*$", text)
+			mgmt, _ := regexp.MatchString("^management.*$", text)
+			if !comment && !mgmt && text != "" {
+				cfg.other += text + "\n"
 			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return config{}, err
 	}
-
+	if isReadingCa {
+		return config{}, errors.New("config file is corrupted")
+	}
 	if !isClient {
 		return config{}, errors.New("not a client configuration (no 'client' option found)")
 	}
