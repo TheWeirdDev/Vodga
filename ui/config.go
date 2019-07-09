@@ -9,6 +9,7 @@ import (
 	"github.com/oschwald/geoip2-golang"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -97,14 +98,19 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	return rmt, nil
 }
 
-func readCredentials(line string) (auth.Credentials, error) {
+func readCredentials(line string, cfgPath string) (auth.Credentials, error) {
 	fields := strings.Fields(line)
 	if len(fields) < 2 {
 		return auth.Credentials{Auth: auth.USER_PASS}, nil
 	}
 	f, err := os.Open(fields[1])
 	if err != nil {
-		return auth.Credentials{}, err
+		cfgPath += string(filepath.Separator)
+		f2, err2 := os.Open(cfgPath + fields[1])
+		if err2 != nil {
+			return auth.Credentials{}, err
+		}
+		f = f2
 	}
 	defer f.Close()
 
@@ -147,7 +153,6 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
-		cfg.data += text + "\n"
 		if match, _ := regexp.MatchString("^remote\\s+.+$", text); match {
 			rmt, err := getRemote(text, db)
 			if err != nil {
@@ -169,10 +174,20 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 			cfg.creds.Username = ""
 			cfg.creds.Password = ""
 		} else if match, _ := regexp.MatchString("^auth-user-pass\\s+.+$", text); match {
-			if creds, err := readCredentials(text); err != nil {
+			dir, err := filepath.Abs(filepath.Dir(file))
+			if err != nil {
+				return config{}, err
+			}
+			if creds, err := readCredentials(text, dir); err != nil {
 				return config{}, fmt.Errorf("unable to read the credentials: %v", err)
 			} else {
 				cfg.creds = creds
+			}
+		} else if match, _ := regexp.MatchString("^ca\\s+.+$", text); match {
+			continue
+		} else {
+			if match, _ := regexp.MatchString("^[#;].*$", text); !match && text != "" {
+				cfg.data += text + "\n"
 			}
 		}
 	}
