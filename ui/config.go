@@ -24,7 +24,7 @@ const (
 )
 
 type remote struct {
-	ip         string
+	ips        []string
 	hostname   string
 	country    string
 	countryIso string
@@ -54,9 +54,10 @@ func getProto(p string) Proto {
 		return ""
 	}
 }
+
 func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	rmt := remote{}
-	// If you are using strings that may be invalid, check that ip is not nil
+
 	fields := strings.Fields(line)
 	if len(fields) < 2 {
 		return rmt, errors.New("unknown remote option")
@@ -66,25 +67,45 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 		return rmt, err
 	}
 
-	var ip net.IP
+	var ips []net.IP
 	if !isIP {
 		rmt.hostname = fields[1]
-		ips, err := net.LookupIP(fields[1])
+		ip4, err := net.LookupIP(fields[1])
 		if err != nil {
 			return rmt, err
 		}
-		ip = ips[0]
-	} else {
-		ip = net.ParseIP(fields[1])
-	}
-	rmt.ip = ip.String()
 
-	record, err := db.Country(ip)
-	if err != nil {
-		return rmt, err
+		for _, ip := range ip4 {
+			if ip.To4() != nil {
+				ips = append(ips, ip)
+			}
+		}
+	} else {
+		ips = append(ips, net.ParseIP(fields[1]))
 	}
-	rmt.country = record.Country.Names["en"]
-	rmt.countryIso = record.Country.IsoCode
+	if len(ips) == 0 {
+		return remote{}, errors.New("can't resolve domain name")
+	}
+
+	for _, ip := range ips {
+		rmt.ips = append(rmt.ips, ip.String())
+	}
+
+	var record *geoip2.Country
+	var dberr error
+	for _, ip := range ips {
+		record, dberr = db.Country(ip)
+		if dberr != nil {
+			continue
+		}
+		rmt.country = record.Country.Names["en"]
+		rmt.countryIso = record.Country.IsoCode
+		break
+	}
+	if dberr != nil {
+		return remote{}, dberr
+	}
+
 	if len(fields) >= 3 {
 		port, err := strconv.ParseUint(fields[2], 10, 32)
 		if err != nil {
@@ -274,7 +295,7 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	if err := scanner.Err(); err != nil {
 		return config{}, err
 	}
-	if isReadingCa || isReadingCert || isReadingKey{
+	if isReadingCa || isReadingCert || isReadingKey {
 		return config{}, errors.New("config file is corrupted")
 	}
 	if !isClient {
@@ -299,7 +320,7 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	if cfg.ca == "" {
 		return config{}, errors.New("no 'ca' option specified")
 	}
-	if (cfg.cert =="" && cfg.key != "") || (cfg.cert !="" && cfg.key == "") {
+	if (cfg.cert == "" && cfg.key != "") || (cfg.cert != "" && cfg.key == "") {
 		return config{}, errors.New("'cert' and 'key' options must be used together")
 	}
 	if len(cfg.remotes) == 0 || cfg.proto == "" {
