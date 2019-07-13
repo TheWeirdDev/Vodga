@@ -95,12 +95,11 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	var dberr error
 	for _, ip := range ips {
 		record, dberr = db.Country(ip)
-		if dberr != nil {
-			continue
+		if dberr == nil {
+			rmt.country = record.Country.Names["en"]
+			rmt.countryIso = record.Country.IsoCode
+			break
 		}
-		rmt.country = record.Country.Names["en"]
-		rmt.countryIso = record.Country.IsoCode
-		break
 	}
 	if dberr != nil {
 		return remote{}, dberr
