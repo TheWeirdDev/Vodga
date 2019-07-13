@@ -44,8 +44,8 @@ func TestGetConfig(t *testing.T) {
 			}
 		}
 	}
-	if cfg.random {
-		t.Errorf("Test #1 failed: random should be false")
+	if !cfg.random {
+		t.Errorf("Test #1 failed: random should be true")
 	}
 	if cfg.creds.Auth != auth.NO_AUTH {
 		t.Errorf("Test #1 failed: auth method is wrong")

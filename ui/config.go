@@ -240,6 +240,9 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 				return config{}, err
 			}
 			cfg.remotes = append(cfg.remotes, rmt)
+			if len(rmt.ips) > 1 {
+				cfg.random = true
+			}
 		} else if match, _ := regexp.MatchString("^proto\\s+.+$", text); match {
 			fields := strings.Fields(text)
 			if len(fields) < 2 {
@@ -325,9 +328,6 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	}
 	if len(cfg.remotes) == 0 || cfg.proto == "" {
 		return config{}, errors.New("no 'remote' or 'proto' option specified")
-	}
-	if len(cfg.remotes) == 1 && cfg.random {
-		cfg.random = false
 	}
 	return cfg, nil
 }
