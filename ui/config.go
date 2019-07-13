@@ -41,6 +41,7 @@ type config struct {
 	ca      string
 	cert    string
 	key     string
+	tlsAuth string
 	other   string
 }
 
@@ -186,7 +187,7 @@ func readCert(line string, cfgPath string) (string, error) {
 	return string(data), nil
 }
 
-func getConfig(file string, db *geoip2.Reader) (config, error) {
+func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return config{}, err
@@ -206,6 +207,7 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	isReadingCa := false
 	isReadingCert := false
 	isReadingKey := false
+	isReadingTLSAuth := false
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -231,6 +233,13 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 				cfg.key += text + "\n"
 			}
 			continue
+		} else if isReadingTLSAuth {
+			if text == "</tls-auth>" {
+				isReadingTLSAuth = false
+			} else {
+				cfg.tlsAuth += text + "\n"
+			}
+			continue
 		}
 
 		if match, _ := regexp.MatchString("^remote\\s+.+$", text); match {
@@ -252,11 +261,12 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 			cfg.random = true
 		} else if text == "client" {
 			isClient = true
-		} else if text == "auth-user-pass" {
+		} else if text == "auth-user-pass" && single{
 			cfg.creds.Auth = auth.USER_PASS
 			cfg.creds.Username = ""
 			cfg.creds.Password = ""
-		} else if match, _ := regexp.MatchString("^auth-user-pass\\s+.+$", text); match {
+		} else if match, _ := regexp.MatchString("^auth-user-pass\\s+.+$", text);
+			match && single {
 			if creds, err := readCredentials(text, dir); err != nil {
 				return config{}, fmt.Errorf("unable to read the credentials: %v", err)
 			} else {
@@ -280,12 +290,20 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 			} else {
 				cfg.key = key
 			}
+		} else if match, _ := regexp.MatchString("^tls-auth\\s+.+$", text); match {
+			if tlsAuth, err := readCert(text, dir); err != nil {
+				return config{}, fmt.Errorf("unable to read the tls-auth file: %v", err)
+			} else {
+				cfg.tlsAuth = tlsAuth
+			}
 		} else if text == "<ca>" {
 			isReadingCa = true
 		} else if text == "<cert>" {
 			isReadingCert = true
 		} else if text == "<key>" {
 			isReadingKey = true
+		} else if text == "<tls-auth>" {
+			isReadingTLSAuth = true
 		} else {
 			comment, _ := regexp.MatchString("^[#;].*$", text)
 			mgmt, _ := regexp.MatchString("^management.*$", text)
@@ -297,7 +315,7 @@ func getConfig(file string, db *geoip2.Reader) (config, error) {
 	if err := scanner.Err(); err != nil {
 		return config{}, err
 	}
-	if isReadingCa || isReadingCert || isReadingKey {
+	if isReadingCa || isReadingCert || isReadingKey || isReadingTLSAuth {
 		return config{}, errors.New("config file is corrupted")
 	}
 	if !isClient {

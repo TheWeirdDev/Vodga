@@ -16,7 +16,7 @@ func TestGetConfig(t *testing.T) {
 	}
 	defer db.Close()
 
-	cfg, err := getConfig("data/test/config_test.ovpn", db)
+	cfg, err := getConfig("data/test/config_test.ovpn", db, true)
 
 	if err != nil {
 		t.Errorf("Test #1 failed: %v", err.Error())
@@ -59,7 +59,7 @@ func TestGetConfigWithCredentials(t *testing.T) {
 	}
 	defer db.Close()
 
-	cfg, err := getConfig("data/test/config_test2.ovpn", db)
+	cfg, err := getConfig("data/test/config_test2.ovpn", db, true)
 
 	if err != nil {
 		t.Errorf("Test #2 failed: %v", err.Error())
@@ -79,5 +79,8 @@ func TestGetConfigWithCredentials(t *testing.T) {
 	}
 	if !strings.Contains(cfg.key, "TESTKEYTESTKEY") {
 		t.Errorf("Test #2 failed: wrong key")
+	}
+	if cfg.tlsAuth == "" {
+		t.Errorf("Test #2 failed: wrong tls auth")
 	}
 }

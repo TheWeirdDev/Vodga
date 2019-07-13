@@ -59,8 +59,8 @@ func (gui *mainGUI) Run() {
 	})
 
 	menu := glib.MenuNew()
-	addInd := glib.MenuItemNew("Add Individual config","win.addInd")
-	addProvider := glib.MenuItemNew("Add Provider configs","win.addProvider")
+	addInd := glib.MenuItemNew("Add single config","win.addInd")
+	addProvider := glib.MenuItemNew("Add provider","win.addProvider")
 
 	submenu := glib.MenuNew()
 	exportConfigs := glib.MenuItemNew("Export configs","win.exportConfigs")
