@@ -7,6 +7,7 @@ import (
 	"github.com/TheWeirdDev/Vodga/shared/messages"
 	"github.com/TheWeirdDev/Vodga/shared/utils"
 	"github.com/TheWeirdDev/Vodga/ui/gtk_deprecated"
+//	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"io"
@@ -37,7 +38,7 @@ func (gui *mainGUI) Run() {
 	defer func() {
 		gui.initWidgets()
 		gui.showMainWindow()
-		gui.connectToDaemon()
+		//gui.connectToDaemon()
 	}()
 
 	gui.quit = make(chan struct{})
@@ -47,39 +48,44 @@ func (gui *mainGUI) Run() {
 	}
 	gui.builder = builder
 
-	window, ok := (*utils.GetWidget(builder, "main_window")).(*gtk.ApplicationWindow)
+	//prov,_ := gtk.CssProviderNew()
+	//prov.LoadFromData(".connect-btn { border-radius: 50%; box-shadow: 0px 0px 10px 3px rgba(0,0,0,0.75); }")
+	//scr,_ := gdk.ScreenGetDefault()
+	//gtk.AddProviderForScreen(scr, prov, gtk.STYLE_PROVIDER_PRIORITY_USER)
+	window, ok := (*GetWidget(builder, "main_window")).(*gtk.ApplicationWindow)
 	if !ok {
 		log.Fatalf("Error: GtkWindow not found")
 	}
 	gui.window = window
 
-	connectBtn, _ := (*utils.GetWidget(builder, "connect_btn")).(*gtk.Button)
+	connectBtn, _ := (*GetWidget(builder, "connect_btn")).(*gtk.Button)
 	_, _ = connectBtn.Connect("clicked", func() {
 
 	})
 
+
 	menu := glib.MenuNew()
-	addInd := glib.MenuItemNew("Add single config","win.addInd")
+	addInd := glib.MenuItemNew("Add single config","win.addSingle")
 	addProvider := glib.MenuItemNew("Add provider","win.addProvider")
 
 	submenu := glib.MenuNew()
-	exportConfigs := glib.MenuItemNew("Export configs","win.exportConfigs")
-	importConfigs := glib.MenuItemNew("Import configs","win.importConfigs")
+	exportConfigs := glib.MenuItemNew("Backup configs","win.backupConfigs")
+	importConfigs := glib.MenuItemNew("Restore configs","win.restoreConfigs")
 	submenu.AppendItem(exportConfigs)
 	submenu.AppendItem(importConfigs)
-	importExport := glib.MenuItemNewSubmenu("Import/Export", &submenu.MenuModel)
+	importExport := glib.MenuItemNewSubmenu("Backup/Restore", &submenu.MenuModel)
 
 	menu.AppendItem(addInd)
 	menu.AppendItem(addProvider)
 	menu.AppendItem(importExport)
 
-	importAction := glib.SimpleActionNew("addInd", nil)
+	importAction := glib.SimpleActionNew("addSingle", nil)
 	importAction.Connect("activate", func() {
 		//TODO: import
 	})
 	gui.window.AddAction(importAction)
 
-	importBtn , _ := (*utils.GetWidget(builder, "btn_import")).(*gtk.MenuButton)
+	importBtn , _ := (*GetWidget(builder, "btn_import")).(*gtk.MenuButton)
 	importBtn.SetMenuModel(&menu.MenuModel)
 
 	_, _ = window.Connect("delete-event", func() bool {
@@ -249,4 +255,12 @@ func (gui *mainGUI) showMainWindow() {
 		log.Fatalf("Error: Main window is not initialized")
 	}
 	gui.window.ShowAll()
+}
+
+func GetWidget(builder *gtk.Builder, id string) *glib.IObject {
+	widget, err := builder.GetObject(id)
+	if err != nil {
+		log.Fatalf("Error: Can't find widget: %q", id)
+	}
+	return &widget
 }
