@@ -2,9 +2,14 @@
 <!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
-  <object class="GtkDialog">
+  <object class="GtkDialog" id="single_import_dialog">
+    <property name="width_request">700</property>
     <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Add OpenVPN config</property>
+    <property name="resizable">False</property>
+    <property name="modal">True</property>
     <property name="type_hint">dialog</property>
+    <property name="urgency_hint">True</property>
     <child>
       <placeholder/>
     </child>
@@ -37,9 +42,10 @@
             </child>
             <child>
               <object class="GtkButton">
-                <property name="label" translatable="yes">button</property>
+                <property name="label" translatable="yes">Import</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="has_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="margin_left">1</property>
                 <property name="always_show_image">True</property>
@@ -80,7 +86,7 @@
                     <property name="can_focus">False</property>
                     <property name="margin_top">10</property>
                     <property name="margin_bottom">10</property>
-                    <property name="label" translatable="yes">Select the openvpn config file:</property>
+                    <property name="label" translatable="yes">Select the OpenVPN config file:</property>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -92,15 +98,18 @@
                   <object class="GtkBox">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="margin_left">5</property>
-                    <property name="margin_right">5</property>
+                    <property name="margin_left">2</property>
+                    <property name="margin_right">2</property>
                     <property name="margin_top">5</property>
                     <property name="margin_bottom">5</property>
                     <child>
                       <object class="GtkEntry" id="config_path">
                         <property name="visible">True</property>
-                        <property name="can_focus">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="margin_left">5</property>
+                        <property name="margin_right">5</property>
                         <property name="editable">False</property>
+                        <property name="placeholder_text" translatable="yes">...</property>
                       </object>
                       <packing>
                         <property name="expand">True</property>
@@ -110,7 +119,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="browse_config">
-                        <property name="label" translatable="yes">...</property>
+                        <property name="label" translatable="yes">Browse</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -136,10 +145,61 @@
               </packing>
             </child>
             <child>
-              <object class="GtkBox">
+              <object class="GtkGrid">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="orientation">vertical</property>
+                <property name="row_homogeneous">True</property>
+                <property name="column_homogeneous">True</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">label</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">label</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">label</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="top_attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">label</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="top_attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
                 <child>
                   <placeholder/>
                 </child>

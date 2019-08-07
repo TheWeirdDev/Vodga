@@ -39,7 +39,7 @@ func (gui *mainGUI) Run() {
 	defer func() {
 		gui.initWidgets()
 		gui.showMainWindow()
-		//gui.connectToDaemon()
+		gui.connectToDaemon()
 		gui.loadAppData()
 	}()
 
@@ -67,8 +67,8 @@ func (gui *mainGUI) Run() {
 
 
 	menu := glib.MenuNew()
-	addInd := glib.MenuItemNew("Add single config","win.addSingle")
-	addProvider := glib.MenuItemNew("Add provider","win.addProvider")
+	addInd := glib.MenuItemNew("Import single config","win.addSingle")
+	addProvider := glib.MenuItemNew("Import provider","win.addProvider")
 
 	submenu := glib.MenuNew()
 	exportConfigs := glib.MenuItemNew("Backup configs","win.backupConfigs")
@@ -83,7 +83,7 @@ func (gui *mainGUI) Run() {
 
 	importAction := glib.SimpleActionNew("addSingle", nil)
 	importAction.Connect("activate", func() {
-		//TODO: import
+		showImportSingleDialog(gui.window)
 	})
 	gui.window.AddAction(importAction)
 
