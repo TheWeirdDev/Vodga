@@ -264,7 +264,7 @@ func (gui *mainGUI) loadAppData() {
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
-	gui.appData = appDatas
+	gui.appData = appData
 }
 
 func GetWidget(builder *gtk.Builder, id string) *glib.IObject {

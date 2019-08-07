@@ -44,7 +44,7 @@ func checkDataDirectory() error {
 	}
 }
 
-func getOrCreateDataFile() (data, error) {
+func getOrCreateData() (data, error) {
 	empty := data{}
 	if _, err := os.Stat(dataPath); err == nil {
 		contents, err := ioutil.ReadFile(dataPath)
@@ -68,7 +68,7 @@ func loadData() (data, error) {
 	if err := checkDataDirectory(); err != nil {
 		return data{}, err
 	}
-	return getOrCreateDataFile()
+	return getOrCreateData()
 }
 
 func saveData(appData data) error {
