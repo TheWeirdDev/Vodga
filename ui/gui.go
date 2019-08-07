@@ -27,6 +27,7 @@ type mainGUI struct {
 	server       net.Conn
 	state        string
 	quit         chan struct{}
+	appData		 data
 }
 
 func CreateGUI() *mainGUI {
@@ -39,6 +40,7 @@ func (gui *mainGUI) Run() {
 		gui.initWidgets()
 		gui.showMainWindow()
 		//gui.connectToDaemon()
+		gui.loadAppData()
 	}()
 
 	gui.quit = make(chan struct{})
@@ -255,6 +257,14 @@ func (gui *mainGUI) showMainWindow() {
 		log.Fatalf("Error: Main window is not initialized")
 	}
 	gui.window.ShowAll()
+}
+
+func (gui *mainGUI) loadAppData() {
+	appData, err := loadData()
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+	gui.appData = appDatas
 }
 
 func GetWidget(builder *gtk.Builder, id string) *glib.IObject {
