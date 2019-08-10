@@ -9,26 +9,26 @@ import (
 )
 
 type cfg struct {
-	name       string
-	creds      auth.Credentials
+	Name       string `json:"name"`
+	Creds      auth.Credentials `json:"creds"`
 }
 
 type singleCfg struct {
 	cfg
-	port 	   uint
-	proto      Proto
-	country    string
-	countryISO string
+	Port 	   uint `json:"port"`
+	Proto      Proto `json:"proto"`
+	Country    string `json:"country"`
+	CountryISO string `json:"country_iso"`
 }
 
 type providerCfg struct {
 	cfg
-	configs[] singleCfg
+	Configs[] singleCfg `json:"configs"`
 }
 
 type data struct {
-	singles[] singleCfg
-	providers[] providerCfg
+	Singles[] singleCfg `json:"single_configs"`
+	Providers[] providerCfg `json:"providers"`
 }
 
 var dataPath = utils.UserHomeDir() + "/.config/vodga/vodga.json"

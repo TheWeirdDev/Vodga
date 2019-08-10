@@ -27,7 +27,7 @@
             <property name="margin_bottom">10</property>
             <property name="layout_style">end</property>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="btn_cancel">
                 <property name="label" translatable="yes">Cancel</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -41,7 +41,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="btn_import">
                 <property name="label" translatable="yes">Import</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -95,7 +95,7 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkBox">
+                  <object class="GtkBox" id="entey_path">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="margin_left">2</property>
@@ -103,7 +103,7 @@
                     <property name="margin_top">5</property>
                     <property name="margin_bottom">5</property>
                     <child>
-                      <object class="GtkEntry" id="config_path">
+                      <object class="GtkEntry" id="entry_path">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="margin_left">5</property>
@@ -118,7 +118,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton" id="browse_config">
+                      <object class="GtkButton" id="btn_browse">
                         <property name="label" translatable="yes">Browse</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -135,6 +135,38 @@
                     <property name="expand">False</property>
                     <property name="fill">True</property>
                     <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="chk_resolve_dns">
+                    <property name="label" translatable="yes">Resolve domain names</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="margin_left">5</property>
+                    <property name="margin_right">6</property>
+                    <property name="draw_indicator">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="lbl_error">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="halign">center</property>
+                    <property name="valign">center</property>
+                    <attributes>
+                      <attribute name="foreground" value="#ff2400000000"/>
+                    </attributes>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">3</property>
                   </packing>
                 </child>
               </object>
@@ -193,12 +225,6 @@
                     <property name="left_attach">2</property>
                     <property name="top_attach">1</property>
                   </packing>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
                 </child>
                 <child>
                   <placeholder/>

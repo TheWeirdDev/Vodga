@@ -193,6 +193,13 @@ func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 		return config{}, err
 	}
 	defer f.Close()
+	stat, err := f.Stat()
+	if err != nil {
+		return config{}, err
+	}
+	if stat.Size() > 100*1024 {
+		return config{}, errors.New("the file is too big")
+	}
 
 	dir, err := filepath.Abs(filepath.Dir(file))
 	if err != nil {

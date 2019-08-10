@@ -67,7 +67,7 @@ func (gui *mainGUI) Run() {
 
 
 	menu := glib.MenuNew()
-	addInd := glib.MenuItemNew("Import single config","win.addSingle")
+	addInd := glib.MenuItemNew("Import a single config","win.addSingle")
 	addProvider := glib.MenuItemNew("Import provider","win.addProvider")
 
 	submenu := glib.MenuNew()
@@ -82,8 +82,8 @@ func (gui *mainGUI) Run() {
 	menu.AppendItem(importExport)
 
 	importAction := glib.SimpleActionNew("addSingle", nil)
-	importAction.Connect("activate", func() {
-		showImportSingleDialog(gui.window)
+	_, _ = importAction.Connect("activate", func() {
+		gui.showImportSingleDialog()
 	})
 	gui.window.AddAction(importAction)
 
@@ -264,6 +264,7 @@ func (gui *mainGUI) loadAppData() {
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
+	fmt.Println(appData)
 	gui.appData = appData
 }
 

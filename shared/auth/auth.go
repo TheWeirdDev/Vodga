@@ -8,8 +8,8 @@ const (
 )
 
 type Credentials struct {
-	Auth       Auth
-	Username   string
-	Password   string
+	Auth       Auth `json:"auth"`
+	Username   string `json:"username"`
+	Password   string `json:"password"`
 }
 
