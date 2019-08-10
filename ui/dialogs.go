@@ -30,15 +30,21 @@ func (gui *mainGUI) showImportSingleDialog() {
 
 	browseBtn, _ := (*GetWidget(builder, "btn_browse")).(*gtk.Button)
 	_, _ = browseBtn.Connect("clicked", func() {
+		errorLabel.Hide()
+
 		fileChooser, err := gtk.FileChooserDialogNewWith2Buttons("Choose openvpn config file", dialog,
 		gtk.FILE_CHOOSER_ACTION_OPEN, "Open", gtk.RESPONSE_ACCEPT,
 		"Cancel", gtk.RESPONSE_CANCEL)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		fileChooser.ShowAll()
-		fileChooser.Run()
 		defer fileChooser.Destroy()
+		fileChooser.ShowAll()
+		response := fileChooser.Run()
+		if response != gtk.RESPONSE_ACCEPT {
+			return
+		}
+
 		filePath := fileChooser.GetFilename()
 		db, err := geoip2.Open(consts.GeoIPDataBase)
 		if err != nil {
@@ -48,10 +54,10 @@ func (gui *mainGUI) showImportSingleDialog() {
 		_, err = getConfig(filePath, db, true)
 		if err != nil {
 			errorLabel.Show()
+			pathEntry.SetText("")
 			errorLabel.SetText("Error: " + err.Error())
 			return
 		}
-		errorLabel.Hide()
 		pathEntry.SetText(filePath)
 	})
 
