@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b5ac9ed79a83cdc7f69442236764aa4d42acdb00db3dfe27145072b9c7136b9d"
+  digest = "1:d5f7838cbfb03ce7d2f8694b563740194a4bfc6f350baf3ddd5ca54a11117296"
   name = "github.com/gotk3/gotk3"
   packages = [
     "cairo",
@@ -13,7 +13,7 @@
     "pango",
   ]
   pruneopts = "UT"
-  revision = "6dcdf9e5c51e982e099eea798c95faea42def17d"
+  revision = "dc58eba1cccce7802b38f6aada034a153f7d996b"
 
 [[projects]]
   digest = "1:e5f4d2be19e2ebab13b8e4248792e1841518fd728cd73b042ee4a5630796bb37"
@@ -33,14 +33,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:afb5346f71acefc3da7ad800f952cb2bcdb762194b05304bbf54d7f9490e31c5"
+  digest = "1:d52ccbb025caf0a2166e0204ed934567b8d0dfdd23a09d947f1f040708888a0a"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "04f50cda93cbb67f2afa353c52f342100e80e625"
+  revision = "fde4db37ae7ad8191b03d30d27f258b5291ae4e3"
 
 [solve-meta]
   analyzer-name = "dep"

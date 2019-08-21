@@ -25,12 +25,15 @@ func (gui *mainGUI) showImportSingleDialog() {
 	})
 
 	pathEntry, _ := (*GetWidget(builder, "entry_path")).(*gtk.Entry)
+	errorBar, _ := (*GetWidget(builder, "bar_error")).(*gtk.InfoBar)
 	errorLabel, _ := (*GetWidget(builder, "lbl_error")).(*gtk.Label)
-	errorLabel.Hide()
+	errorBar.Connect("response", func() {
+		errorBar.SetProperty("revealed", false)
+	})
 
 	browseBtn, _ := (*GetWidget(builder, "btn_browse")).(*gtk.Button)
 	_, _ = browseBtn.Connect("clicked", func() {
-		errorLabel.Hide()
+		errorBar.SetProperty("revealed", false)
 
 		fileChooser, err := gtk.FileChooserDialogNewWith2Buttons("Choose openvpn config file", dialog,
 		gtk.FILE_CHOOSER_ACTION_OPEN, "Open", gtk.RESPONSE_ACCEPT,
@@ -53,7 +56,7 @@ func (gui *mainGUI) showImportSingleDialog() {
 		defer db.Close()
 		_, err = getConfig(filePath, db, true)
 		if err != nil {
-			errorLabel.Show()
+			errorBar.SetProperty("revealed", true)
 			pathEntry.SetText("")
 			errorLabel.SetText("Error: " + err.Error())
 			return
