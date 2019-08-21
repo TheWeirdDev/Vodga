@@ -65,7 +65,7 @@ func (gui *mainGUI) Run() {
 
 	})
 
-
+	//TODO: Change this into a ui file
 	menu := glib.MenuNew()
 	addInd := glib.MenuItemNew("Import a single config","win.addSingle")
 	addProvider := glib.MenuItemNew("Import provider","win.addProvider")
@@ -90,6 +90,7 @@ func (gui *mainGUI) Run() {
 	importBtn , _ := (*GetWidget(builder, "btn_import")).(*gtk.MenuButton)
 	importBtn.SetMenuModel(&menu.MenuModel)
 
+	// Hide in tray when closed
 	_, _ = window.Connect("delete-event", func() bool {
 		window.Hide()
 		return true
@@ -106,6 +107,7 @@ func (gui *mainGUI) Run() {
 	}()
 }
 
+// Listen for daemon broadcast messages (should be a goroutine)
 func (gui *mainGUI) listenToDaemon() {
 	scanner := bufio.NewScanner(gui.server)
 
@@ -168,6 +170,8 @@ func (gui *mainGUI) connectToDaemon() {
 	c, err := net.Dial("unix", consts.UnixSocket)
 	if err != nil {
 
+		// We use this label to repeat the dialog if systemctl returns an error
+		// I don't believe that goto is a bad practice, i works nicely for this purpose
 	firstDialog:
 		msgDialog := gtk.MessageDialogNew(gui.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
 			gtk.BUTTONS_YES_NO, "Vodga daemon is not running, do you want to start it?")
@@ -204,6 +208,7 @@ func (gui *mainGUI) connectToDaemon() {
 	go gui.listenToDaemon()
 }
 
+// Initialize tray icon, menu and other widgets
 func (gui *mainGUI) initWidgets() {
 	statusIcon, err := gtk_deprecated.StatusIconNewFromIconName("gtk-disconnect")
 	if err != nil {
@@ -259,12 +264,13 @@ func (gui *mainGUI) showMainWindow() {
 	gui.window.ShowAll()
 }
 
+// We load every imported config and provider
+// TODO: add the config list
 func (gui *mainGUI) loadAppData() {
 	appData, err := loadData()
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
-	fmt.Println(appData)
 	gui.appData = appData
 }
 

@@ -56,6 +56,7 @@ func getProto(p string) Proto {
 	}
 }
 
+// Parses a 'remote' option into a struct
 func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	rmt := remote{}
 
@@ -69,6 +70,7 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	}
 
 	var ips []net.IP
+	// Lookup ip address if remote is not an IP
 	if !isIP {
 		rmt.hostname = fields[1]
 		ip4, err := net.LookupIP(fields[1])
@@ -92,6 +94,8 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 		rmt.ips = append(rmt.ips, ip.String())
 	}
 
+	// Fetch country info from remotes
+	// Only one is needed because we assume all of them are from the same country
 	var record *geoip2.Country
 	var dberr error
 	for _, ip := range ips {
@@ -105,7 +109,9 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	if dberr != nil {
 		return remote{}, dberr
 	}
+	// TODO: Check for empty country field while importing
 
+	// port is provided in remote option
 	if len(fields) >= 3 {
 		port, err := strconv.ParseUint(fields[2], 10, 32)
 		if err != nil {
@@ -114,6 +120,7 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 		rmt.port = uint(port)
 	}
 
+	// proto is provided in remote option
 	if len(fields) >= 4 {
 		rmt.proto = getProto(fields[3])
 		if rmt.proto == "" {
@@ -123,12 +130,14 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 	return rmt, nil
 }
 
+// Read credentials from an external text file
 func readCredentials(line string, cfgPath string) (auth.Credentials, error) {
 	fields := strings.Fields(line)
 	if len(fields) < 2 {
 		return auth.Credentials{Auth: auth.USER_PASS}, nil
 	}
 	f, err := os.Open(fields[1])
+	// If the path doesn't exist, check the relative path
 	if err != nil {
 		cfgPath += string(filepath.Separator)
 		f2, err2 := os.Open(cfgPath + fields[1])
@@ -142,6 +151,9 @@ func readCredentials(line string, cfgPath string) (auth.Credentials, error) {
 	scanner := bufio.NewScanner(f)
 	var creds []string
 
+	// The first line is the username (mandatory)
+	// The second line is the password (optional)
+	// The rest of the file will be ignored just like openvpn does
 	for scanner.Scan() {
 		if len(creds) >= 2 {
 			break
@@ -164,12 +176,14 @@ func readCredentials(line string, cfgPath string) (auth.Credentials, error) {
 	}
 }
 
+// Read external certificates
 func readCert(line string, cfgPath string) (string, error) {
 	fields := strings.Fields(line)
 	if len(fields) < 2 {
 		return "", nil
 	}
 	f, err := os.Open(fields[1])
+	// check the relative path
 	if err != nil {
 		cfgPath += string(filepath.Separator)
 		f2, err2 := os.Open(cfgPath + fields[1])
@@ -187,6 +201,8 @@ func readCert(line string, cfgPath string) (string, error) {
 	return string(data), nil
 }
 
+// getConfig reads the configuration file and gather all the info needed
+// and parses it into structures that we can store
 func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 	f, err := os.Open(file)
 	if err != nil {
@@ -197,6 +213,7 @@ func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 	if err != nil {
 		return config{}, err
 	}
+	// The config file size shouldn't be more than "100 KB"
 	if stat.Size() > 100*1024 {
 		return config{}, errors.New("the file is too big")
 	}
@@ -211,6 +228,8 @@ func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 	cfg.creds.Auth = auth.NO_AUTH
 
 	isClient := false
+
+	// Keep track of reading inline certificates
 	isReadingCa := false
 	isReadingCert := false
 	isReadingKey := false
@@ -249,6 +268,7 @@ func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 			continue
 		}
 
+		// Parse every option we need and save the rest in cfg.other
 		if match, _ := regexp.MatchString("^remote\\s+.+$", text); match {
 			rmt, err := getRemote(text, db)
 			if err != nil {
@@ -312,6 +332,7 @@ func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 		} else if text == "<tls-auth>" {
 			isReadingTLSAuth = true
 		} else {
+			// Comments and management options will be deleted
 			comment, _ := regexp.MatchString("^[#;].*$", text)
 			mgmt, _ := regexp.MatchString("^management.*$", text)
 			if !comment && !mgmt && text != "" {
@@ -329,7 +350,10 @@ func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 		return config{}, errors.New("not a client configuration (no 'client' option found)")
 	}
 	cfg.path = file
+
+ checkProto:
 	if cfg.proto != "" {
+		// If config has a proto and some of it remotes don't, add it to them
 		for i := range cfg.remotes {
 			rmt := &cfg.remotes[i]
 			if rmt.proto == "" {
@@ -337,10 +361,12 @@ func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 			}
 		}
 	} else {
+		// If config don't have a proto, get it from the first remote that has
 		for _, rmt := range cfg.remotes {
 			if rmt.proto != "" {
 				cfg.proto = rmt.proto
-				break
+				// Now add this proto to other remotes that don't have proto
+				goto checkProto
 			}
 		}
 	}

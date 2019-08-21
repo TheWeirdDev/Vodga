@@ -41,6 +41,14 @@ func (gui *mainGUI) showImportSingleDialog() {
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}
+		filter, err := gtk.FileFilterNew()
+		if err != nil {
+			log.Fatalf("Error: %v", err)
+		}
+		filter.SetName("OpenVPN Configuration files")
+		filter.AddPattern("*.ovpn")
+		filter.AddPattern("*.conf")
+		fileChooser.SetFilter(filter)
 		defer fileChooser.Destroy()
 		fileChooser.ShowAll()
 		response := fileChooser.Run()
