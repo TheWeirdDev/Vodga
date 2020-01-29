@@ -73,6 +73,7 @@ func init() {
 		{glib.Type(C.gtk_assistant_page_type_get_type()), marshalAssistantPageType},
 		{glib.Type(C.gtk_buttons_type_get_type()), marshalButtonsType},
 		{glib.Type(C.gtk_calendar_display_options_get_type()), marshalCalendarDisplayOptions},
+		{glib.Type(C.gtk_corner_type_get_type()), marshalCornerType},
 		{glib.Type(C.gtk_dest_defaults_get_type()), marshalDestDefaults},
 		{glib.Type(C.gtk_dialog_flags_get_type()), marshalDialogFlags},
 		{glib.Type(C.gtk_entry_icon_position_get_type()), marshalEntryIconPosition},
@@ -98,6 +99,7 @@ func init() {
 		{glib.Type(C.gtk_state_flags_get_type()), marshalStateFlags},
 		{glib.Type(C.gtk_target_flags_get_type()), marshalTargetFlags},
 		{glib.Type(C.gtk_text_direction_get_type()), marshalTextDirection},
+		{glib.Type(C.gtk_text_search_flags_get_type()), marshalTextSearchFlags},
 		{glib.Type(C.gtk_toolbar_style_get_type()), marshalToolbarStyle},
 		{glib.Type(C.gtk_tree_model_flags_get_type()), marshalTreeModelFlags},
 		{glib.Type(C.gtk_window_position_get_type()), marshalWindowPosition},
@@ -872,6 +874,35 @@ const (
 func marshalWrapMode(p uintptr) (interface{}, error) {
 	c := C.g_value_get_enum((*C.GValue)(unsafe.Pointer(p)))
 	return WrapMode(c), nil
+}
+
+// TextSearchFlags is a representation of GTK's GtkTextSearchFlags.
+type TextSearchFlags int
+
+const (
+	TEXT_SEARCH_VISIBLE_ONLY     TextSearchFlags = C.GTK_TEXT_SEARCH_VISIBLE_ONLY
+	TEXT_SEARCH_TEXT_ONLY        TextSearchFlags = C.GTK_TEXT_SEARCH_TEXT_ONLY
+	TEXT_SEARCH_CASE_INSENSITIVE TextSearchFlags = C.GTK_TEXT_SEARCH_CASE_INSENSITIVE
+)
+
+func marshalTextSearchFlags(p uintptr) (interface{}, error) {
+	c := C.g_value_get_enum((*C.GValue)(unsafe.Pointer(p)))
+	return TextSearchFlags(c), nil
+}
+
+// CornerType is a representation of GTK's GtkCornerType.
+type CornerType int
+
+const (
+	CORNER_TOP_LEFT     CornerType = C.GTK_CORNER_TOP_LEFT
+	CORNER_BOTTOM_LEFT  CornerType = C.GTK_CORNER_BOTTOM_LEFT
+	CORNER_TOP_RIGHT    CornerType = C.GTK_CORNER_TOP_RIGHT
+	CORNER_BOTTOM_RIGHT CornerType = C.GTK_CORNER_BOTTOM_RIGHT
+)
+
+func marshalCornerType(p uintptr) (interface{}, error) {
+	c := C.g_value_get_enum((*C.GValue)(unsafe.Pointer(p)))
+	return CornerType(c), nil
 }
 
 /*
@@ -2882,6 +2913,35 @@ func (v *Dialog) GetContentArea() (*Box, error) {
 	return b, nil
 }
 
+// DialogNewWithButtons() is a wrapper around gtk_dialog_new_with_buttons().
+// i.e: []interface{}{"Accept", gtk.RESPONSE_ACCEPT}.
+func DialogNewWithButtons(title string, parent IWindow, flags DialogFlags, buttons ...[]interface{}) (dialog *Dialog, err error) {
+	cstr := (*C.gchar)(C.CString(title))
+	defer C.free(unsafe.Pointer(cstr))
+
+	var w *C.GtkWindow = nil
+	if parent != nil {
+		w = parent.toWindow()
+	}
+
+	var cbutton *C.gchar = nil
+	c := C._gtk_dialog_new_with_buttons(cstr, w, C.GtkDialogFlags(flags), cbutton)
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	dialog = wrapDialog(glib.Take(unsafe.Pointer(c)))
+
+	for idx := 0; idx < len(buttons); idx++ {
+		cbutton = (*C.gchar)(C.CString(buttons[idx][0].(string)))
+		defer C.free(unsafe.Pointer(cbutton))
+
+		if C.gtk_dialog_add_button(dialog.native(), cbutton, C.gint(buttons[idx][1].(ResponseType))) == nil {
+			return nil, nilPtrErr
+		}
+	}
+	return
+}
+
 // TODO(jrick)
 /*
 func (v *gdk.Screen) AlternativeDialogButtonOrder() bool {
@@ -3693,6 +3753,90 @@ func wrapEntryCompletion(obj *glib.Object) *EntryCompletion {
 	return &EntryCompletion{obj}
 }
 
+// EntryCompletionNew is a wrapper around gtk_entry_completion_new
+func EntryCompletionNew() (*EntryCompletion, error) {
+	c := C.gtk_entry_completion_new()
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	obj := glib.Take(unsafe.Pointer(c))
+	return wrapEntryCompletion(obj), nil
+}
+
+// SetModel is a wrapper around gtk_entry_completion_set_model
+func (v *EntryCompletion) SetModel(model ITreeModel) {
+	var mptr *C.GtkTreeModel
+	if model != nil {
+		mptr = model.toTreeModel()
+	}
+	C.gtk_entry_completion_set_model(v.native(), mptr)
+}
+
+// GetModel is a wrapper around gtk_entry_completion_get_model
+func (v *EntryCompletion) GetModel() (*TreeModel, error) {
+	c := C.gtk_entry_completion_get_model(v.native())
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	obj := glib.Take(unsafe.Pointer(c))
+	return wrapTreeModel(obj), nil
+}
+
+// SetMinimumKeyLength is a wrapper around gtk_entry_completion_set_minimum_key_length
+func (v *EntryCompletion) SetMinimumKeyLength(minimumLength int) {
+	C.gtk_entry_completion_set_minimum_key_length(v.native(), C.gint(minimumLength))
+}
+
+// GetMinimumKeyLength is a wrapper around gtk_entry_completion_get_minimum_key_length
+func (v *EntryCompletion) GetMinimumKeyLength() int {
+	c := C.gtk_entry_completion_get_minimum_key_length(v.native())
+	return int(c)
+}
+
+// SetTextColumn is a wrapper around gtk_entry_completion_set_text_column
+func (v *EntryCompletion) SetTextColumn(textColumn int) {
+	C.gtk_entry_completion_set_text_column(v.native(), C.gint(textColumn))
+}
+
+// GetTextColumn is a wrapper around gtk_entry_completion_get_text_column
+func (v *EntryCompletion) GetTextColumn() int {
+	c := C.gtk_entry_completion_get_text_column(v.native())
+	return int(c)
+}
+
+// SetInlineCompletion is a wrapper around gtk_entry_completion_set_inline_completion
+func (v *EntryCompletion) SetInlineCompletion(inlineCompletion bool) {
+	C.gtk_entry_completion_set_inline_completion(v.native(), gbool(inlineCompletion))
+}
+
+// GetInlineCompletion is a wrapper around gtk_entry_completion_get_inline_completion
+func (v *EntryCompletion) GetInlineCompletion() bool {
+	c := C.gtk_entry_completion_get_inline_completion(v.native())
+	return gobool(c)
+}
+
+// SetPopupCompletion is a wrapper around gtk_entry_completion_set_popup_completion
+func (v *EntryCompletion) SetPopupCompletion(popupCompletion bool) {
+	C.gtk_entry_completion_set_popup_completion(v.native(), gbool(popupCompletion))
+}
+
+// GetPopupCompletion is a wrapper around gtk_entry_completion_get_popup_completion
+func (v *EntryCompletion) GetPopupCompletion() bool {
+	c := C.gtk_entry_completion_get_popup_completion(v.native())
+	return gobool(c)
+}
+
+// SetPopupSetWidth is a wrapper around gtk_entry_completion_set_popup_set_width
+func (v *EntryCompletion) SetPopupSetWidth(popupSetWidth bool) {
+	C.gtk_entry_completion_set_popup_set_width(v.native(), gbool(popupSetWidth))
+}
+
+// GetPopupSetWidth is a wrapper around gtk_entry_completion_get_popup_set_width
+func (v *EntryCompletion) GetPopupSetWidth() bool {
+	c := C.gtk_entry_completion_get_popup_set_width(v.native())
+	return gobool(c)
+}
+
 /*
  * GtkEventBox
  */
@@ -3870,6 +4014,31 @@ func (v *FileChooser) GetFilename() string {
 	s := goString(c)
 	defer C.g_free((C.gpointer)(c))
 	return s
+}
+
+// SelectFilename is a wrapper around gtk_file_chooser_select_filename().
+func (v *FileChooser) SelectFilename(filename string) bool {
+	cstr := C.CString(filename)
+	defer C.free(unsafe.Pointer(cstr))
+	c := C.gtk_file_chooser_select_filename(v.native(), cstr)
+	return gobool(c)
+}
+
+// UnselectFilename is a wrapper around gtk_file_chooser_unselect_filename().
+func (v *FileChooser) UnselectFilename(filename string) {
+	cstr := C.CString(filename)
+	defer C.free(unsafe.Pointer(cstr))
+	C.gtk_file_chooser_unselect_filename(v.native(), cstr)
+}
+
+// SelectAll is a wrapper around gtk_file_chooser_select_all().
+func (v *FileChooser) SelectAll() {
+	C.gtk_file_chooser_select_all(v.native())
+}
+
+// UnselectAll is a wrapper around gtk_file_chooser_unselect_all().
+func (v *FileChooser) UnselectAll() {
+	C.gtk_file_chooser_unselect_all(v.native())
 }
 
 // GetFilenames is a wrapper around gtk_file_chooser_get_filenames().
@@ -4092,12 +4261,18 @@ func FileChooserDialogNewWith1Button(
 	action FileChooserAction,
 	first_button_text string,
 	first_button_id ResponseType) (*FileChooserDialog, error) {
+
+	var w *C.GtkWindow = nil
+	if parent != nil {
+		w = parent.toWindow()
+	}
+
 	c_title := C.CString(title)
 	defer C.free(unsafe.Pointer(c_title))
 	c_first_button_text := C.CString(first_button_text)
 	defer C.free(unsafe.Pointer(c_first_button_text))
 	c := C.gtk_file_chooser_dialog_new_1(
-		(*C.gchar)(c_title), parent.toWindow(), C.GtkFileChooserAction(action),
+		(*C.gchar)(c_title), w, C.GtkFileChooserAction(action),
 		(*C.gchar)(c_first_button_text), C.int(first_button_id))
 	if c == nil {
 		return nil, nilPtrErr
@@ -4115,6 +4290,12 @@ func FileChooserDialogNewWith2Buttons(
 	first_button_id ResponseType,
 	second_button_text string,
 	second_button_id ResponseType) (*FileChooserDialog, error) {
+
+	var w *C.GtkWindow = nil
+	if parent != nil {
+		w = parent.toWindow()
+	}
+
 	c_title := C.CString(title)
 	defer C.free(unsafe.Pointer(c_title))
 	c_first_button_text := C.CString(first_button_text)
@@ -4122,7 +4303,7 @@ func FileChooserDialogNewWith2Buttons(
 	c_second_button_text := C.CString(second_button_text)
 	defer C.free(unsafe.Pointer(c_second_button_text))
 	c := C.gtk_file_chooser_dialog_new_2(
-		(*C.gchar)(c_title), parent.toWindow(), C.GtkFileChooserAction(action),
+		(*C.gchar)(c_title), w, C.GtkFileChooserAction(action),
 		(*C.gchar)(c_first_button_text), C.int(first_button_id),
 		(*C.gchar)(c_second_button_text), C.int(second_button_id))
 	if c == nil {
@@ -4217,6 +4398,13 @@ func (v *FileFilter) SetName(name string) {
 	cstr := C.CString(name)
 	defer C.free(unsafe.Pointer(cstr))
 	C.gtk_file_filter_set_name(v.native(), (*C.gchar)(cstr))
+}
+
+// AddMimeType is a wrapper around gtk_file_filter_add_mime_type().
+func (v *FileFilter) AddMimeType(mimeType string) {
+	cstr := C.CString(mimeType)
+	defer C.free(unsafe.Pointer(cstr))
+	C.gtk_file_filter_add_mime_type(v.native(), (*C.gchar)(cstr))
 }
 
 // AddPattern is a wrapper around gtk_file_filter_add_pattern().
@@ -4723,11 +4911,30 @@ func (v *Image) GetIconSet() {
 }
 */
 
-// TODO(jrick) GdkPixbufAnimation
-/*
-func (v *Image) GetAnimation() {
+// GetAnimation() is a wrapper around gtk_image_get_animation()
+func (v *Image) GetAnimation() *gdk.PixbufAnimation {
+	c := C.gtk_image_get_animation(v.native())
+	if c == nil {
+		return nil
+	}
+	return &gdk.PixbufAnimation{glib.Take(unsafe.Pointer(c))}
 }
-*/
+
+// ImageNewFromAnimation() is a wrapper around gtk_image_new_from_animation()
+func ImageNewFromAnimation(animation *gdk.PixbufAnimation) (*Image, error) {
+	c := C.gtk_image_new_from_animation((*C.GdkPixbufAnimation)(animation.NativePrivate()))
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	obj := glib.Take(unsafe.Pointer(c))
+	return wrapImage(obj), nil
+}
+
+// SetFromAnimation is a wrapper around gtk_image_set_from_animation().
+func (v *Image) SetFromAnimation(animation *gdk.PixbufAnimation) {
+	pbaptr := (*C.GdkPixbufAnimation)(unsafe.Pointer(animation.NativePrivate()))
+	C.gtk_image_set_from_animation(v.native(), pbaptr)
+}
 
 // GetIconName() is a wrapper around gtk_image_get_icon_name().
 func (v *Image) GetIconName() (string, IconSize) {
@@ -4874,6 +5081,17 @@ func (v *LinkButton) GetUri() string {
 func (v *LinkButton) SetUri(uri string) {
 	cstr := C.CString(uri)
 	C.gtk_link_button_set_uri(v.native(), (*C.gchar)(cstr))
+}
+
+// GetVisited is a wrapper around gtk_link_button_get_visited().
+func (v *LinkButton) GetVisited() bool {
+	c := C.gtk_link_button_get_visited(v.native())
+	return gobool(c)
+}
+
+// SetVisited is a wrapper around gtk_link_button_set_visited().
+func (v *LinkButton) SetVisited(visited bool) {
+	C.gtk_link_button_set_visited(v.native(), gbool(visited))
 }
 
 /*
@@ -5433,6 +5651,17 @@ func (v *MessageDialog) FormatSecondaryMarkup(format string, a ...interface{}) {
 	defer C.free(unsafe.Pointer(cstr))
 	C._gtk_message_dialog_format_secondary_markup(v.native(),
 		(*C.gchar)(cstr))
+}
+
+// GetMessageArea() is a wrapper around gtk_message_dialog_get_message_area().
+func (v *MessageDialog) GetMessageArea() (*Box, error) {
+	c := C.gtk_message_dialog_get_message_area(v.native())
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	obj := glib.Take(unsafe.Pointer(c))
+	b := &Box{Container{Widget{glib.InitiallyUnowned{obj}}}}
+	return b, nil
 }
 
 /*
@@ -6373,6 +6602,17 @@ func (v *Range) SetIncrements(step, page float64) {
 // SetRange() is a wrapper around gtk_range_set_range().
 func (v *Range) SetRange(min, max float64) {
 	C.gtk_range_set_range(v.native(), C.gdouble(min), C.gdouble(max))
+}
+
+// GetInverted() is a wrapper around gtk_range_get_inverted().
+func (v *Range) GetInverted() bool {
+	c := C.gtk_range_get_inverted(v.native())
+	return gobool(c)
+}
+
+// SetInverted() is a wrapper around gtk_range_set_inverted().
+func (v *Range) SetInverted(inverted bool) {
+	C.gtk_range_set_inverted(v.native(), gbool(inverted))
 }
 
 // IRecentChooser is an interface type implemented by all structs
@@ -7772,6 +8012,163 @@ func (v *TextBuffer) GetMark(mark_name string) *TextMark {
 	return (*TextMark)(ret)
 }
 
+// DeleteMark() is a wrapper around gtk_text_buffer_delete_mark()
+func (v *TextBuffer) DeleteMark(mark *TextMark) {
+	C.gtk_text_buffer_delete_mark(v.native(), (*C.GtkTextMark)(mark))
+}
+
+// DeleteMarkByName() is a wrapper around  gtk_text_buffer_delete_mark_by_name()
+func (v *TextBuffer) DeleteMarkByName(name string) {
+	cstr := C.CString(name)
+	defer C.free(unsafe.Pointer(cstr))
+	C.gtk_text_buffer_delete_mark_by_name(v.native(), (*C.gchar)(cstr))
+}
+
+// PlaceCursor() is a wrapper around gtk_text_buffer_place_cursor()
+func (v *TextBuffer) PlaceCursor(iter *TextIter) {
+	C.gtk_text_buffer_place_cursor(v.native(), (*C.GtkTextIter)(iter))
+}
+
+// GetHasSelection() is a variant solution around gtk_text_buffer_get_has_selection().
+func (v *TextBuffer) GetHasSelection() bool {
+	value, _ := v.GetProperty("has-selection")
+	return value.(bool)
+}
+
+// DeleteSelection() is a wrapper around gtk_text_buffer_delete_selection().
+func (v *TextBuffer) DeleteSelection(interactive, defaultEditable bool) bool {
+	return gobool(C.gtk_text_buffer_delete_selection(v.native(), gbool(interactive), gbool(defaultEditable)))
+}
+
+// GetSelectionBound() is a wrapper around gtk_text_buffer_get_selection_bound().
+func (v *TextBuffer) GetSelectionBound() *TextMark {
+	ret := C.gtk_text_buffer_get_selection_bound(v.native())
+	return (*TextMark)(ret)
+}
+
+// GetSelectionBounds() is a wrapper around gtk_text_buffer_get_selection_bounds().
+func (v *TextBuffer) GetSelectionBounds() (start, end *TextIter, ok bool) {
+	start, end = new(TextIter), new(TextIter)
+	cbool := C.gtk_text_buffer_get_selection_bounds(v.native(), (*C.GtkTextIter)(start), (*C.GtkTextIter)(end))
+	return start, end, gobool(cbool)
+}
+
+// GetIterAtLineOffset() is a wrapper around gtk_text_buffer_get_iter_at_line_offset().
+func (v *TextBuffer) GetIterAtLineOffset(lineNumber, charOffset int) (iter *TextIter) {
+	iter = new(TextIter)
+	C.gtk_text_buffer_get_iter_at_line_offset(v.native(), (*C.GtkTextIter)(iter), (C.gint)(lineNumber), (C.gint)(charOffset))
+	return
+}
+
+// CreateTag() is a variant solution around gtk_text_buffer_create_tag().
+func (v *TextBuffer) CreateTag(name string, props map[string]interface{}) (tag *TextTag) {
+	var err error
+	var tagTable *TextTagTable
+	if tag, err = TextTagNew(name); err == nil {
+		if tagTable, err = v.GetTagTable(); err == nil {
+			tagTable.Add(tag)
+			for p, v := range props {
+				if err = tag.SetProperty(p, v); err != nil {
+					err = errors.New(fmt.Sprintf("%s, %v: %v\n", err.Error(), p, v))
+					break
+				}
+			}
+		}
+	}
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	return
+}
+
+// RemoveTagByName() is a wrapper around  gtk_text_buffer_remove_tag_by_name()
+func (v *TextBuffer) RemoveTagByName(name string, start, end *TextIter) {
+	cstr := C.CString(name)
+	defer C.free(unsafe.Pointer(cstr))
+	C.gtk_text_buffer_remove_tag_by_name(v.native(), (*C.gchar)(cstr), (*C.GtkTextIter)(start), (*C.GtkTextIter)(end))
+}
+
+// InsertMarkup() is a wrapper around  gtk_text_buffer_register_serialize_tagset()
+func (v *TextBuffer) RegisterSerializeTagset(tagsetName string) gdk.Atom {
+	cstr := C.CString(tagsetName)
+	if len(tagsetName) == 0 {
+		cstr = nil
+	}
+	defer C.free(unsafe.Pointer(cstr))
+	c := C.gtk_text_buffer_register_serialize_tagset(v.native(), (*C.gchar)(cstr))
+	return gdk.Atom(uintptr(unsafe.Pointer(c)))
+}
+
+// RegisterDeserializeTagset() is a wrapper around  gtk_text_buffer_register_deserialize_tagset()
+func (v *TextBuffer) RegisterDeserializeTagset(tagsetName string) gdk.Atom {
+	cstr := C.CString(tagsetName)
+	if len(tagsetName) == 0 {
+		cstr = nil
+	}
+	defer C.free(unsafe.Pointer(cstr))
+	c := C.gtk_text_buffer_register_deserialize_tagset(v.native(), (*C.gchar)(cstr))
+	return gdk.Atom(uintptr(unsafe.Pointer(c)))
+}
+
+// Serialize() is a wrapper around  gtk_text_buffer_serialize()
+func (v *TextBuffer) Serialize(contentBuffer *TextBuffer, format gdk.Atom, start, end *TextIter) string {
+	var length = new(C.gsize)
+	ptr := C.gtk_text_buffer_serialize(v.native(), contentBuffer.native(), C.GdkAtom(unsafe.Pointer(format)),
+		(*C.GtkTextIter)(start), (*C.GtkTextIter)(end), length)
+	return C.GoStringN((*C.char)(unsafe.Pointer(ptr)), (C.int)(*length))
+}
+
+// Deserialize() is a wrapper around  gtk_text_buffer_deserialize()
+func (v *TextBuffer) Deserialize(contentBuffer *TextBuffer, format gdk.Atom, iter *TextIter, data []byte) (ok bool, err error) {
+	var length = (C.gsize)(len(data))
+	var cerr *C.GError = nil
+	cbool := C.gtk_text_buffer_deserialize(v.native(), contentBuffer.native(), C.GdkAtom(unsafe.Pointer(format)),
+		(*C.GtkTextIter)(iter), (*C.guint8)(unsafe.Pointer(&data[0])), length, &cerr)
+	if !gobool(cbool) {
+		defer C.g_error_free(cerr)
+		return false, errors.New(goString(cerr.message))
+	}
+	return gobool(cbool), nil
+}
+
+// GetInsert() is a wrapper around gtk_text_buffer_get_insert().
+func (v *TextBuffer) GetInsert() *TextMark {
+	ret := C.gtk_text_buffer_get_insert(v.native())
+	return (*TextMark)(ret)
+}
+
+// CopyClipboard() is a wrapper around gtk_text_buffer_copy_clipboard().
+func (v *TextBuffer) CopyClipboard(clipboard *Clipboard) {
+	C.gtk_text_buffer_copy_clipboard(v.native(), clipboard.native())
+}
+
+// CutClipboard() is a wrapper around gtk_text_buffer_cut_clipboard().
+func (v *TextBuffer) CutClipboard(clipboard *Clipboard, defaultEditable bool) {
+	C.gtk_text_buffer_cut_clipboard(v.native(), clipboard.native(), gbool(defaultEditable))
+}
+
+// PasteClipboard() is a wrapper around gtk_text_buffer_paste_clipboard().
+func (v *TextBuffer) PasteClipboard(clipboard *Clipboard, overrideLocation *TextIter, defaultEditable bool) {
+	C.gtk_text_buffer_paste_clipboard(v.native(), clipboard.native(), (*C.GtkTextIter)(overrideLocation), gbool(defaultEditable))
+}
+
+// AddSelectionClipboard() is a wrapper around gtk_text_buffer_add_selection_clipboard().
+func (v *TextBuffer) AddSelectionClipboard(clipboard *Clipboard) {
+	C.gtk_text_buffer_add_selection_clipboard(v.native(), clipboard.native())
+}
+
+// RemoveSelectionClipboard() is a wrapper around gtk_text_buffer_remove_selection_clipboard().
+func (v *TextBuffer) RemoveSelectionClipboard(clipboard *Clipboard) {
+	C.gtk_text_buffer_remove_selection_clipboard(v.native(), clipboard.native())
+}
+
+// GetIterAtLineIndex() is a wrapper around gtk_text_buffer_get_iter_at_line_index().
+func (v *TextBuffer) GetIterAtLineIndex(lineNumber, charIndex int) (iter *TextIter) {
+	iter = new(TextIter)
+	C.gtk_text_buffer_get_iter_at_line_index(v.native(), (*C.GtkTextIter)(iter), (C.gint)(lineNumber), (C.gint)(charIndex))
+	return
+}
+
 /*
  * GtkToggleButton
  */
@@ -8557,6 +8954,46 @@ func (v *TreeModel) FilterNew(root *TreePath) (*TreeModelFilter, error) {
 	return wrapTreeModelFilter(obj), nil
 }
 
+// TreeModelForeachFunc defines the function prototype for the foreach function (f arg) for
+// (* TreeModel).ForEach
+type TreeModelForeachFunc func(model *TreeModel, path *TreePath, iter *TreeIter, userData interface{}) bool
+
+type treeModelForeachFuncData struct {
+	fn       TreeModelForeachFunc
+	userData interface{}
+}
+
+var (
+	treeModelForeachFuncRegistry = struct {
+		sync.RWMutex
+		next int
+		m    map[int]treeModelForeachFuncData
+	}{
+		next: 1,
+		m:    make(map[int]treeModelForeachFuncData),
+	}
+)
+
+// ForEach() is a wrapper around gtk_tree_model_foreach ()
+func (v *TreeModel) ForEach(f TreeModelForeachFunc, userData ...interface{}) error {
+	if len(userData) > 1 {
+		return errors.New("userData len must be 0 or 1")
+	}
+
+	t := treeModelForeachFuncData{fn: f}
+	if len(userData) > 0 {
+		t.userData = userData[0]
+	}
+	treeModelForeachFuncRegistry.Lock()
+	id := treeModelForeachFuncRegistry.next
+	treeModelForeachFuncRegistry.next++
+	treeModelForeachFuncRegistry.m[id] = t
+	treeModelForeachFuncRegistry.Unlock()
+
+	C._gtk_tree_model_foreach(v.toTreeModel(), C.gpointer(uintptr(id)))
+	return nil
+}
+
 /*
  * GtkTreeModelFilter
  */
@@ -8666,6 +9103,21 @@ func (v *TreeModelFilter) SetVisibleFunc(f TreeModelFilterVisibleFunc, userData 
 	return nil
 }
 
+// Down() is a wrapper around gtk_tree_path_down()
+func (v *TreePath) Down() {
+	C.gtk_tree_path_down(v.native())
+}
+
+// IsAncestor() is a wrapper around gtk_tree_path_is_ancestor()
+func (v *TreePath) IsAncestor(descendant *TreePath) bool {
+	return gobool(C.gtk_tree_path_is_ancestor(v.native(), descendant.native()))
+}
+
+// IsDescendant() is a wrapper around gtk_tree_path_is_descendant()
+func (v *TreePath) IsDescendant(ancestor *TreePath) bool {
+	return gobool(C.gtk_tree_path_is_descendant(v.native(), ancestor.native()))
+}
+
 /*
  * GtkTreePath
  */
@@ -8732,6 +9184,63 @@ func TreePathNewFromString(path string) (*TreePath, error) {
 	t := &TreePath{c}
 	runtime.SetFinalizer(t, (*TreePath).free)
 	return t, nil
+}
+
+// Next() is a wrapper around gtk_tree_path_next()
+func (v *TreePath) Next() {
+	C.gtk_tree_path_next(v.native())
+}
+
+// Prev() is a wrapper around gtk_tree_path_prev()
+func (v *TreePath) Prev() bool {
+	return gobool(C.gtk_tree_path_prev(v.native()))
+}
+
+// Up() is a wrapper around gtk_tree_path_up()
+func (v *TreePath) Up() bool {
+	return gobool(C.gtk_tree_path_up(v.native()))
+}
+
+// TreePathNewFirst() is a wrapper around gtk_tree_path_new_first().
+func TreePathNewFirst() (*TreePath, error) {
+	c := C.gtk_tree_path_new_first()
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	t := &TreePath{c}
+	runtime.SetFinalizer(t, (*TreePath).free)
+	return t, nil
+}
+
+// AppendIndex() is a wrapper around gtk_tree_path_append_index().
+func (v *TreePath) AppendIndex(index int) {
+	C.gtk_tree_path_append_index(v.native(), C.gint(index))
+}
+
+// PrependIndex() is a wrapper around gtk_tree_path_prepend_index().
+func (v *TreePath) PrependIndex(index int) {
+	C.gtk_tree_path_prepend_index(v.native(), C.gint(index))
+}
+
+// GetDepth() is a wrapper around gtk_tree_path_get_depth().
+func (v *TreePath) GetDepth() int {
+	return int(C.gtk_tree_path_get_depth(v.native()))
+}
+
+// Copy() is a wrapper around gtk_tree_path_copy().
+func (v *TreePath) Copy() (*TreePath, error) {
+	c := C.gtk_tree_path_copy(v.native())
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	t := &TreePath{c}
+	runtime.SetFinalizer(t, (*TreePath).free)
+	return t, nil
+}
+
+// Compare() is a wrapper around gtk_tree_path_compare().
+func (v *TreePath) Compare(b *TreePath) int {
+	return int(C.gtk_tree_path_compare(v.native(), b.native()))
 }
 
 /*
@@ -8844,6 +9353,71 @@ func (v *TreeSelection) SelectAll() {
 // UnelectAll() is a wrapper around gtk_tree_selection_unselect_all()
 func (v *TreeSelection) UnselectAll() {
 	C.gtk_tree_selection_unselect_all(v.native())
+}
+
+// UnselectIter() is a wrapper around gtk_tree_selection_unselect_iter().
+func (v *TreeSelection) UnselectIter(iter *TreeIter) {
+	C.gtk_tree_selection_unselect_iter(v.native(), iter.native())
+}
+
+// IterIsSelected() is a wrapper around gtk_tree_selection_iter_is_selected().
+func (v *TreeSelection) IterIsSelected(iter *TreeIter) bool {
+	return gobool(C.gtk_tree_selection_iter_is_selected(v.native(), iter.native()))
+}
+
+// SelectRange() is a wrapper around gtk_tree_selection_select_range().
+func (v *TreeSelection) SelectRange(start, end *TreePath) {
+	C.gtk_tree_selection_select_range(v.native(), start.native(), end.native())
+}
+
+// UnselectRange() is a wrapper around gtk_tree_selection_unselect_range().
+func (v *TreeSelection) UnselectRange(start, end *TreePath) {
+	C.gtk_tree_selection_unselect_range(v.native(), start.native(), end.native())
+}
+
+// PathIsSelected() is a wrapper around gtk_tree_selection_path_is_selected().
+func (v *TreeSelection) PathIsSelected(path *TreePath) bool {
+	return gobool(C.gtk_tree_selection_path_is_selected(v.native(), path.native()))
+}
+
+// TreeSelectionForeachFunc defines the function prototype for the selected_foreach function (f arg) for
+// (* TreeSelection).SelectedForEach
+type TreeSelectionForeachFunc func(model *TreeModel, path *TreePath, iter *TreeIter, userData interface{})
+
+type treeSelectionForeachFuncData struct {
+	fn       TreeSelectionForeachFunc
+	userData interface{}
+}
+
+var (
+	treeSelectionForeachFuncRegistry = struct {
+		sync.RWMutex
+		next int
+		m    map[int]treeSelectionForeachFuncData
+	}{
+		next: 1,
+		m:    make(map[int]treeSelectionForeachFuncData),
+	}
+)
+
+// SelectedForEach() is a wrapper around gtk_tree_selection_selected_foreach()
+func (v *TreeSelection) SelectedForEach(f TreeSelectionForeachFunc, userData ...interface{}) error {
+	if len(userData) > 1 {
+		return errors.New("userData len must be 0 or 1")
+	}
+
+	t := treeSelectionForeachFuncData{fn: f}
+	if len(userData) > 0 {
+		t.userData = userData[0]
+	}
+	treeSelectionForeachFuncRegistry.Lock()
+	id := treeSelectionForeachFuncRegistry.next
+	treeSelectionForeachFuncRegistry.next++
+	treeSelectionForeachFuncRegistry.m[id] = t
+	treeSelectionForeachFuncRegistry.Unlock()
+
+	C._gtk_tree_selection_selected_foreach(v.native(), C.gpointer(uintptr(id)))
+	return nil
 }
 
 /*
@@ -9016,6 +9590,50 @@ func (v *TreeStore) Clear() {
 	C.gtk_tree_store_clear(v.native())
 }
 
+// InsertBefore() is a wrapper around gtk_tree_store_insert_before().
+func (v *TreeStore) InsertBefore(parent, sibling *TreeIter) *TreeIter {
+	var ti C.GtkTreeIter
+	C.gtk_tree_store_insert_before(v.native(), &ti, parent.native(), sibling.native())
+	iter := &TreeIter{ti}
+	return iter
+}
+
+// InsertAfter() is a wrapper around gtk_tree_store_insert_after().
+func (v *TreeStore) InsertAfter(parent, sibling *TreeIter) *TreeIter {
+	var ti C.GtkTreeIter
+	C.gtk_tree_store_insert_after(v.native(), &ti, parent.native(), sibling.native())
+	iter := &TreeIter{ti}
+	return iter
+}
+
+// InsertWithValues() is a wrapper around gtk_tree_store_insert_with_valuesv().
+func (v *TreeStore) InsertWithValues(iter, parent *TreeIter, position int, inColumns []int, inValues []interface{}) error {
+	length := len(inColumns)
+	if len(inValues) < length {
+		length = len(inValues)
+	}
+
+	var cColumns []C.gint
+	var cValues []C.GValue
+	for i := 0; i < length; i++ {
+		cColumns = append(cColumns, C.gint(inColumns[i]))
+
+		gv, err := glib.GValue(inValues[i])
+		if err != nil {
+			return err
+		}
+
+		var cvp *C.GValue = (*C.GValue)(gv.Native())
+		cValues = append(cValues, *cvp)
+	}
+	var cColumnsPointer *C.gint = &cColumns[0]
+	var cValuesPointer *C.GValue = &cValues[0]
+
+	C.gtk_tree_store_insert_with_valuesv(v.native(), iter.native(), parent.native(), C.gint(position), cColumnsPointer, cValuesPointer, C.gint(length))
+
+	return nil
+}
+
 /*
  * TreeSortable
  */
@@ -9181,98 +9799,98 @@ func VolumeButtonNew() (*VolumeButton, error) {
 type WrapFn interface{}
 
 var WrapMap = map[string]WrapFn{
-	"GtkAccelGroup":          wrapAccelGroup,
-	"GtkAccelMao":            wrapAccelMap,
-	"GtkAdjustment":          wrapAdjustment,
-	"GtkApplicationWindow":   wrapApplicationWindow,
-	"GtkAssistant":           wrapAssistant,
-	"GtkBin":                 wrapBin,
-	"GtkBox":                 wrapBox,
-	"GtkButton":              wrapButton,
-	"GtkCalendar":            wrapCalendar,
-	"GtkCellLayout":          wrapCellLayout,
-	"GtkCellRenderer":        wrapCellRenderer,
-	"GtkCellRendererSpinner": wrapCellRendererSpinner,
-	"GtkCellRendererPixbuf":  wrapCellRendererPixbuf,
-	"GtkCellRendererText":    wrapCellRendererText,
-	"GtkCellRendererProgress":wrapCellRendererProgress,
-	"GtkCellRendererToggle":  wrapCellRendererToggle,
-	"GtkCheckButton":         wrapCheckButton,
-	"GtkCheckMenuItem":       wrapCheckMenuItem,
-	"GtkClipboard":           wrapClipboard,
-	"GtkColorButton":         wrapColorButton,
-	"GtkContainer":           wrapContainer,
-	"GtkDialog":              wrapDialog,
-	"GtkDrawingArea":         wrapDrawingArea,
-	"GtkEditable":            wrapEditable,
-	"GtkEntry":               wrapEntry,
-	"GtkEntryBuffer":         wrapEntryBuffer,
-	"GtkEntryCompletion":     wrapEntryCompletion,
-	"GtkEventBox":            wrapEventBox,
-	"GtkExpander":            wrapExpander,
-	"GtkFrame":               wrapFrame,
-	"GtkFileChooser":         wrapFileChooser,
-	"GtkFileChooserButton":   wrapFileChooserButton,
-	"GtkFileChooserDialog":   wrapFileChooserDialog,
-	"GtkFileChooserWidget":   wrapFileChooserWidget,
-	"GtkGrid":                wrapGrid,
-	"GtkIconView":            wrapIconView,
-	"GtkImage":               wrapImage,
-	"GtkLabel":               wrapLabel,
-	"GtkLayout":              wrapLayout,
-	"GtkLinkButton":          wrapLinkButton,
-	"GtkListStore":           wrapListStore,
-	"GtkMenu":                wrapMenu,
-	"GtkMenuBar":             wrapMenuBar,
-	"GtkMenuButton":          wrapMenuButton,
-	"GtkMenuItem":            wrapMenuItem,
-	"GtkMenuShell":           wrapMenuShell,
-	"GtkMessageDialog":       wrapMessageDialog,
-	"GtkNotebook":            wrapNotebook,
-	"GtkOffscreenWindow":     wrapOffscreenWindow,
-	"GtkOrientable":          wrapOrientable,
-	"GtkOverlay":             wrapOverlay,
-	"GtkPaned":               wrapPaned,
-	"GtkProgressBar":         wrapProgressBar,
-	"GtkRadioButton":         wrapRadioButton,
-	"GtkRadioMenuItem":       wrapRadioMenuItem,
-	"GtkRange":               wrapRange,
-	"GtkRecentChooser":       wrapRecentChooser,
-	"GtkRecentChooserMenu":   wrapRecentChooserMenu,
-	"GtkRecentFilter":        wrapRecentFilter,
-	"GtkRecentManager":       wrapRecentManager,
-	"GtkScaleButton":         wrapScaleButton,
-	"GtkScale":               wrapScale,
-	"GtkScrollable":          wrapScrollable,
-	"GtkScrollbar":           wrapScrollbar,
-	"GtkScrolledWindow":      wrapScrolledWindow,
-	"GtkSearchEntry":         wrapSearchEntry,
-	"GtkSeparator":           wrapSeparator,
-	"GtkSeparatorMenuItem":   wrapSeparatorMenuItem,
-	"GtkSeparatorToolItem":   wrapSeparatorToolItem,
-	"GtkSpinButton":          wrapSpinButton,
-	"GtkSpinner":             wrapSpinner,
-	"GtkStatusbar":           wrapStatusbar,
-	"GtkSwitch":              wrapSwitch,
-	"GtkTextView":            wrapTextView,
-	"GtkTextBuffer":          wrapTextBuffer,
-	"GtkTextTag":             wrapTextTag,
-	"GtkTextTagTable":        wrapTextTagTable,
-	"GtkToggleButton":        wrapToggleButton,
-	"GtkToolbar":             wrapToolbar,
-	"GtkToolButton":          wrapToolButton,
-	"GtkToggleToolButton":    wrapToggleToolButton,
-	"GtkToolItem":            wrapToolItem,
-	"GtkTreeModel":           wrapTreeModel,
-	"GtkTreeModelFilter":     wrapTreeModelFilter,
-	"GtkTreeSelection":       wrapTreeSelection,
-	"GtkTreeStore":           wrapTreeStore,
-	"GtkTreeView":            wrapTreeView,
-	"GtkTreeViewColumn":      wrapTreeViewColumn,
-	"GtkViewport":            wrapViewport,
-	"GtkVolumeButton":        wrapVolumeButton,
-	"GtkWidget":              wrapWidget,
-	"GtkWindow":              wrapWindow,
+	"GtkAccelGroup":           wrapAccelGroup,
+	"GtkAccelMao":             wrapAccelMap,
+	"GtkAdjustment":           wrapAdjustment,
+	"GtkApplicationWindow":    wrapApplicationWindow,
+	"GtkAssistant":            wrapAssistant,
+	"GtkBin":                  wrapBin,
+	"GtkBox":                  wrapBox,
+	"GtkButton":               wrapButton,
+	"GtkCalendar":             wrapCalendar,
+	"GtkCellLayout":           wrapCellLayout,
+	"GtkCellRenderer":         wrapCellRenderer,
+	"GtkCellRendererSpinner":  wrapCellRendererSpinner,
+	"GtkCellRendererPixbuf":   wrapCellRendererPixbuf,
+	"GtkCellRendererText":     wrapCellRendererText,
+	"GtkCellRendererProgress": wrapCellRendererProgress,
+	"GtkCellRendererToggle":   wrapCellRendererToggle,
+	"GtkCheckButton":          wrapCheckButton,
+	"GtkCheckMenuItem":        wrapCheckMenuItem,
+	"GtkClipboard":            wrapClipboard,
+	"GtkColorButton":          wrapColorButton,
+	"GtkContainer":            wrapContainer,
+	"GtkDialog":               wrapDialog,
+	"GtkDrawingArea":          wrapDrawingArea,
+	"GtkEditable":             wrapEditable,
+	"GtkEntry":                wrapEntry,
+	"GtkEntryBuffer":          wrapEntryBuffer,
+	"GtkEntryCompletion":      wrapEntryCompletion,
+	"GtkEventBox":             wrapEventBox,
+	"GtkExpander":             wrapExpander,
+	"GtkFrame":                wrapFrame,
+	"GtkFileChooser":          wrapFileChooser,
+	"GtkFileChooserButton":    wrapFileChooserButton,
+	"GtkFileChooserDialog":    wrapFileChooserDialog,
+	"GtkFileChooserWidget":    wrapFileChooserWidget,
+	"GtkGrid":                 wrapGrid,
+	"GtkIconView":             wrapIconView,
+	"GtkImage":                wrapImage,
+	"GtkLabel":                wrapLabel,
+	"GtkLayout":               wrapLayout,
+	"GtkLinkButton":           wrapLinkButton,
+	"GtkListStore":            wrapListStore,
+	"GtkMenu":                 wrapMenu,
+	"GtkMenuBar":              wrapMenuBar,
+	"GtkMenuButton":           wrapMenuButton,
+	"GtkMenuItem":             wrapMenuItem,
+	"GtkMenuShell":            wrapMenuShell,
+	"GtkMessageDialog":        wrapMessageDialog,
+	"GtkNotebook":             wrapNotebook,
+	"GtkOffscreenWindow":      wrapOffscreenWindow,
+	"GtkOrientable":           wrapOrientable,
+	"GtkOverlay":              wrapOverlay,
+	"GtkPaned":                wrapPaned,
+	"GtkProgressBar":          wrapProgressBar,
+	"GtkRadioButton":          wrapRadioButton,
+	"GtkRadioMenuItem":        wrapRadioMenuItem,
+	"GtkRange":                wrapRange,
+	"GtkRecentChooser":        wrapRecentChooser,
+	"GtkRecentChooserMenu":    wrapRecentChooserMenu,
+	"GtkRecentFilter":         wrapRecentFilter,
+	"GtkRecentManager":        wrapRecentManager,
+	"GtkScaleButton":          wrapScaleButton,
+	"GtkScale":                wrapScale,
+	"GtkScrollable":           wrapScrollable,
+	"GtkScrollbar":            wrapScrollbar,
+	"GtkScrolledWindow":       wrapScrolledWindow,
+	"GtkSearchEntry":          wrapSearchEntry,
+	"GtkSeparator":            wrapSeparator,
+	"GtkSeparatorMenuItem":    wrapSeparatorMenuItem,
+	"GtkSeparatorToolItem":    wrapSeparatorToolItem,
+	"GtkSpinButton":           wrapSpinButton,
+	"GtkSpinner":              wrapSpinner,
+	"GtkStatusbar":            wrapStatusbar,
+	"GtkSwitch":               wrapSwitch,
+	"GtkTextView":             wrapTextView,
+	"GtkTextBuffer":           wrapTextBuffer,
+	"GtkTextTag":              wrapTextTag,
+	"GtkTextTagTable":         wrapTextTagTable,
+	"GtkToggleButton":         wrapToggleButton,
+	"GtkToolbar":              wrapToolbar,
+	"GtkToolButton":           wrapToolButton,
+	"GtkToggleToolButton":     wrapToggleToolButton,
+	"GtkToolItem":             wrapToolItem,
+	"GtkTreeModel":            wrapTreeModel,
+	"GtkTreeModelFilter":      wrapTreeModelFilter,
+	"GtkTreeSelection":        wrapTreeSelection,
+	"GtkTreeStore":            wrapTreeStore,
+	"GtkTreeView":             wrapTreeView,
+	"GtkTreeViewColumn":       wrapTreeViewColumn,
+	"GtkViewport":             wrapViewport,
+	"GtkVolumeButton":         wrapVolumeButton,
+	"GtkWidget":               wrapWidget,
+	"GtkWindow":               wrapWindow,
 }
 
 // cast takes a native GObject and casts it to the appropriate Go struct.

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/TheWeirdDev/Vodga/shared/auth"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
-	"github.com/oschwald/geoip2-golang"
+	"github.com/TheWeirdDev/Vodga/shared/utils"
 	"io/ioutil"
 	"net"
 	"os"
@@ -57,7 +57,7 @@ func getProto(p string) Proto {
 }
 
 // Parses a 'remote' option into a struct
-func getRemote(line string, db *geoip2.Reader) (remote, error) {
+func getRemote(line string) (remote, error) {
 	rmt := remote{}
 
 	fields := strings.Fields(line)
@@ -96,18 +96,19 @@ func getRemote(line string, db *geoip2.Reader) (remote, error) {
 
 	// Fetch country info from remotes
 	// Only one is needed because we assume all of them are from the same country
-	var record *geoip2.Country
-	var dberr error
+	var country, iso string
+	var geoipErr error
 	for _, ip := range ips {
-		record, dberr = db.Country(ip)
-		if dberr == nil {
-			rmt.country = record.Country.Names["en"]
-			rmt.countryIso = record.Country.IsoCode
+		country, iso, geoipErr = utils.GetGeoIPData(ip.String())
+		if geoipErr == nil {
+			rmt.country = country
+			rmt.countryIso = iso
 			break
 		}
 	}
-	if dberr != nil {
-		return remote{}, dberr
+	if geoipErr != nil {
+		rmt.country = ""
+		rmt.countryIso = ""
 	}
 	// TODO: Check for empty country field while importing
 
@@ -203,7 +204,7 @@ func readCert(line string, cfgPath string) (string, error) {
 
 // getConfig reads the configuration file and gather all the info needed
 // and parses it into structures that we can store
-func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
+func getConfig(file string, single bool) (config, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return config{}, err
@@ -270,7 +271,7 @@ func getConfig(file string, db *geoip2.Reader, single bool) (config, error) {
 
 		// Parse every option we need and save the rest in cfg.other
 		if match, _ := regexp.MatchString("^remote\\s+.+$", text); match {
-			rmt, err := getRemote(text, db)
+			rmt, err := getRemote(text)
 			if err != nil {
 				return config{}, err
 			}

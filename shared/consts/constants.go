@@ -4,7 +4,6 @@ const (
 	//TODO: Change These!
 	UIFilePath    = "/home/alireza/go/src/github.com/TheWeirdDev/Vodga/ui/data/vodga.ui"
 	AddSingelUI   = "/home/alireza/go/src/github.com/TheWeirdDev/Vodga/ui/data/import_single.ui"
-	GeoIPDataBase = "/home/alireza/Downloads/GeoLite2-Country.mmdb"
 	UnixSocket    = "/tmp/vodgad.sock"
 	MgmtSocket    = "/tmp/vodgad_mgmt.sock"
 	UnknownCmd    = "UNKNOWN_COMMAND"

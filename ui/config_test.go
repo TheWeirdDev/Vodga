@@ -2,21 +2,13 @@ package ui
 
 import (
 	"github.com/TheWeirdDev/Vodga/shared/auth"
-	"github.com/TheWeirdDev/Vodga/shared/consts"
-	"github.com/oschwald/geoip2-golang"
 	"regexp"
 	"strings"
 	"testing"
 )
 
 func TestGetConfig(t *testing.T) {
-	db, err := geoip2.Open(consts.GeoIPDataBase)
-	if err != nil {
-		t.Errorf("Test #1 failed: %v", err.Error())
-	}
-	defer db.Close()
-
-	cfg, err := getConfig("data/test/config_test.ovpn", db, true)
+	cfg, err := getConfig("data/test/config_test.ovpn", true)
 
 	if err != nil {
 		t.Errorf("Test #1 failed: %v", err.Error())
@@ -50,16 +42,12 @@ func TestGetConfig(t *testing.T) {
 	if cfg.creds.Auth != auth.NO_AUTH {
 		t.Errorf("Test #1 failed: auth method is wrong")
 	}
+	//fmt.Printf("%v\n", cfg.remotes)
 }
 
 func TestGetConfigWithCredentials(t *testing.T) {
-	db, err := geoip2.Open(consts.GeoIPDataBase)
-	if err != nil {
-		t.Errorf("Test #2 failed: %v", err.Error())
-	}
-	defer db.Close()
 
-	cfg, err := getConfig("data/test/config_test2.ovpn", db, true)
+	cfg, err := getConfig("data/test/config_test2.ovpn", true)
 
 	if err != nil {
 		t.Errorf("Test #2 failed: %v", err.Error())
@@ -83,4 +71,5 @@ func TestGetConfigWithCredentials(t *testing.T) {
 	if cfg.tlsAuth == "" {
 		t.Errorf("Test #2 failed: wrong tls auth")
 	}
+	//fmt.Printf("%v\n", cfg.remotes)
 }

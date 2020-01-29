@@ -3,7 +3,6 @@ package ui
 import (
 	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/oschwald/geoip2-golang"
 	"log"
 )
 
@@ -57,12 +56,12 @@ func (gui *mainGUI) showImportSingleDialog() {
 		}
 
 		filePath := fileChooser.GetFilename()
-		db, err := geoip2.Open(consts.GeoIPDataBase)
-		if err != nil {
-			log.Fatalf("Error: %v", err)
-		}
-		defer db.Close()
-		_, err = getConfig(filePath, db, true)
+		//db, err := geoip2.Open(consts.GeoIPDataBase)
+		//if err != nil {
+		//	log.Fatalf("Error: %v", err)
+		//}
+		//defer db.Close()
+		_, err = getConfig(filePath, true)
 		if err != nil {
 			errorBar.SetProperty("revealed", true)
 			pathEntry.SetText("")

@@ -2,3 +2,11 @@ github.com/gotk3/gotk3 v0.0.0-20190108052711-d09d58ef3476 h1:jiDcHh/HCWp8A63RVSC
 github.com/gotk3/gotk3 v0.0.0-20190108052711-d09d58ef3476/go.mod h1:Eew3QBwAOBTrfFFDmsDE5wZWbcagBL1NUslj1GhRveo=
 github.com/gotk3/gotk3 v0.0.0-20190215151738-24002f352641 h1:wDv1fMdN8DiDx50xjkqhAN/5+m+5xW442Fbx6mgYjP0=
 github.com/gotk3/gotk3 v0.0.0-20190215151738-24002f352641/go.mod h1:Eew3QBwAOBTrfFFDmsDE5wZWbcagBL1NUslj1GhRveo=
+github.com/gotk3/gotk3 v0.0.0-20191010201156-711c17fcaec0 h1:W3j2NfHLKn7Etm9HlqGCMpsIxk9VFpYmrh7TchldFSk=
+github.com/gotk3/gotk3 v0.0.0-20191010201156-711c17fcaec0/go.mod h1:Eew3QBwAOBTrfFFDmsDE5wZWbcagBL1NUslj1GhRveo=
+github.com/oschwald/geoip2-golang v1.3.0 h1:D+Hsdos1NARPbzZ2aInUHZL+dApIzo8E0ErJVsWcku8=
+github.com/oschwald/geoip2-golang v1.3.0/go.mod h1:0LTTzix/Ao1uMvOhAV4iLU0Lz7eCrP94qZWBTDKf0iE=
+github.com/oschwald/maxminddb-golang v1.5.0 h1:rmyoIV6z2/s9TCJedUuDiKht2RN12LWJ1L7iRGtWY64=
+github.com/oschwald/maxminddb-golang v1.5.0/go.mod h1:3jhIUymTJ5VREKyIhWm66LJiQt04F0UCDdodShpjWsY=
+golang.org/x/sys v0.0.0-20191010194322-b09406accb47 h1:/XfQ9z7ib8eEJX2hdgFTZJ/ntt0swNk5oYBziWeTCvY=
+golang.org/x/sys v0.0.0-20191010194322-b09406accb47/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

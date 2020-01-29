@@ -167,6 +167,7 @@ func (gui *mainGUI) listenToDaemon() {
 }
 
 func (gui *mainGUI) connectToDaemon() {
+
 	c, err := net.Dial("unix", consts.UnixSocket)
 	if err != nil {
 
