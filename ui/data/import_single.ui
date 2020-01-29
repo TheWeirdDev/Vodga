@@ -5,13 +5,39 @@
   <object class="GtkDialog" id="single_import_dialog">
     <property name="width_request">700</property>
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Add OpenVPN config</property>
     <property name="resizable">False</property>
     <property name="modal">True</property>
     <property name="type_hint">dialog</property>
     <property name="urgency_hint">True</property>
-    <child>
-      <placeholder/>
+    <child type="titlebar">
+      <object class="GtkHeaderBar">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="title" translatable="yes">Import single config file</property>
+        <child>
+          <object class="GtkButton" id="btn_cancel">
+            <property name="label" translatable="yes">Cancel</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="btn_import">
+            <property name="label" translatable="yes">Import</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <style>
+              <class name="suggested-action"/>
+            </style>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
     </child>
     <child internal-child="vbox">
       <object class="GtkBox">
@@ -21,43 +47,17 @@
         <child internal-child="action_area">
           <object class="GtkButtonBox">
             <property name="can_focus">False</property>
+            <property name="no_show_all">True</property>
             <property name="margin_left">10</property>
             <property name="margin_right">10</property>
             <property name="margin_top">10</property>
             <property name="margin_bottom">10</property>
             <property name="layout_style">end</property>
             <child>
-              <object class="GtkButton" id="btn_cancel">
-                <property name="label" translatable="yes">Cancel</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="margin_right">1</property>
-              </object>
-              <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
+              <placeholder/>
             </child>
             <child>
-              <object class="GtkButton" id="btn_import">
-                <property name="label" translatable="yes">Import</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="has_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="margin_left">1</property>
-                <property name="always_show_image">True</property>
-                <style>
-                  <class name="suggested-action"/>
-                </style>
-              </object>
-              <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
+              <placeholder/>
             </child>
           </object>
           <packing>
@@ -71,6 +71,7 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
+            <property name="homogeneous">True</property>
             <child>
               <object class="GtkBox">
                 <property name="visible">True</property>
@@ -147,9 +148,14 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="margin_left">15</property>
                     <property name="margin_top">10</property>
                     <property name="margin_bottom">10</property>
-                    <property name="label" translatable="yes">Select the OpenVPN config file:</property>
+                    <property name="label" translatable="yes">OpenVPN config file:</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -161,10 +167,11 @@
                   <object class="GtkBox" id="entey_path">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="margin_left">2</property>
-                    <property name="margin_right">2</property>
+                    <property name="margin_left">15</property>
+                    <property name="margin_right">15</property>
                     <property name="margin_top">5</property>
                     <property name="margin_bottom">5</property>
+                    <property name="spacing">5</property>
                     <child>
                       <object class="GtkEntry" id="entry_path">
                         <property name="visible">True</property>
@@ -172,7 +179,6 @@
                         <property name="margin_left">5</property>
                         <property name="margin_right">5</property>
                         <property name="editable">False</property>
-                        <property name="placeholder_text" translatable="yes">...</property>
                       </object>
                       <packing>
                         <property name="expand">True</property>
@@ -200,22 +206,6 @@
                     <property name="position">2</property>
                   </packing>
                 </child>
-                <child>
-                  <object class="GtkCheckButton" id="chk_resolve_dns">
-                    <property name="label" translatable="yes">Resolve domain names</property>
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">False</property>
-                    <property name="margin_left">5</property>
-                    <property name="margin_right">6</property>
-                    <property name="draw_indicator">True</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">3</property>
-                  </packing>
-                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -224,16 +214,18 @@
               </packing>
             </child>
             <child>
-              <object class="GtkGrid">
-                <property name="visible">True</property>
+              <object class="GtkGrid" id="grid_details">
                 <property name="can_focus">False</property>
+                <property name="no_show_all">True</property>
                 <property name="row_homogeneous">True</property>
                 <property name="column_homogeneous">True</property>
                 <child>
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">label</property>
+                    <property name="halign">end</property>
+                    <property name="margin_right">6</property>
+                    <property name="label" translatable="yes">remote:</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -244,7 +236,9 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">label</property>
+                    <property name="halign">end</property>
+                    <property name="margin_right">5</property>
+                    <property name="label" translatable="yes">country:</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -252,32 +246,53 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel">
+                  <object class="GtkLabel" id="lbl_remote">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">label</property>
+                    <property name="halign">start</property>
+                    <property name="margin_left">5</property>
                   </object>
                   <packing>
-                    <property name="left_attach">2</property>
+                    <property name="left_attach">1</property>
                     <property name="top_attach">0</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel">
+                  <object class="GtkLabel" id="lbl_country">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">label</property>
+                    <property name="halign">start</property>
+                    <property name="margin_left">5</property>
                   </object>
                   <packing>
-                    <property name="left_attach">2</property>
+                    <property name="left_attach">1</property>
                     <property name="top_attach">1</property>
                   </packing>
                 </child>
                 <child>
-                  <placeholder/>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="halign">end</property>
+                    <property name="margin_right">5</property>
+                    <property name="label" translatable="yes">proto:</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">2</property>
+                  </packing>
                 </child>
                 <child>
-                  <placeholder/>
+                  <object class="GtkLabel" id="lbl_proto">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="margin_left">5</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">2</property>
+                  </packing>
                 </child>
               </object>
               <packing>

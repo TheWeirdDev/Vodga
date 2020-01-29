@@ -175,7 +175,8 @@ func (gui *mainGUI) connectToDaemon() {
 		// I don't believe that goto is a bad practice, i works nicely for this purpose
 	firstDialog:
 		msgDialog := gtk.MessageDialogNew(gui.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
-			gtk.BUTTONS_YES_NO, "Vodga daemon is not running, do you want to start it?")
+			gtk.BUTTONS_YES_NO, "Vodga service is not running, do you want to start it?")
+		msgDialog.SetTitle("Start service?")
 		response := msgDialog.Run()
 		msgDialog.Destroy()
 		if response == gtk.RESPONSE_YES {
@@ -188,6 +189,7 @@ func (gui *mainGUI) connectToDaemon() {
 				if _, ok := err.(*exec.ExitError); ok {
 					msgDialog2 := gtk.MessageDialogNew(gui.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
 						gtk.BUTTONS_OK, "Cannot start the daemon")
+					msgDialog2.SetTitle("Error")
 					msgDialog2.Run()
 					msgDialog2.Destroy()
 
