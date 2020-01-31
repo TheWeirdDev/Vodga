@@ -167,13 +167,12 @@ func (gui *mainGUI) listenToDaemon() {
 }
 
 func (gui *mainGUI) connectToDaemon() {
-
+firstDialog:
 	c, err := net.Dial("unix", consts.UnixSocket)
 	if err != nil {
 
 		// We use this label to repeat the dialog if systemctl returns an error
 		// I don't believe that goto is a bad practice, i works nicely for this purpose
-	firstDialog:
 		msgDialog := gtk.MessageDialogNew(gui.window, gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
 			gtk.BUTTONS_YES_NO, "Vodga service is not running, do you want to start it?")
 		msgDialog.SetTitle("Start service?")

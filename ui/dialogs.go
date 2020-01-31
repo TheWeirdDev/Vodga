@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/TheWeirdDev/Vodga/shared/auth"
 	"github.com/TheWeirdDev/Vodga/shared/consts"
 	"github.com/gotk3/gotk3/gtk"
 	"log"
@@ -46,6 +47,10 @@ func (gui *mainGUI) showImportSingleDialog() {
 	remoteLabel, _ := (*GetWidget(builder, "lbl_remote")).(*gtk.Label)
 	countryLabel, _ := (*GetWidget(builder, "lbl_country")).(*gtk.Label)
 	protoLabel, _ := (*GetWidget(builder, "lbl_proto")).(*gtk.Label)
+	authCheckbox, _ := (*GetWidget(builder, "chk_password")).(*gtk.CheckButton)
+	authBox, _ := (*GetWidget(builder, "box_auth")).(*gtk.Box)
+	userEntrry, _ := (*GetWidget(builder, "entry_username")).(*gtk.Entry)
+	passEntry, _ := (*GetWidget(builder, "entry_password")).(*gtk.Entry)
 
 	browseBtn, _ := (*GetWidget(builder, "btn_browse")).(*gtk.Button)
 	_, _ = browseBtn.Connect("clicked", func() {
@@ -87,7 +92,17 @@ func (gui *mainGUI) showImportSingleDialog() {
 		remoteLabel.SetText(cfg.remotes[0].ips[0] + ":" + strconv.FormatUint(uint64(cfg.remotes[0].port), 10))
 		countryLabel.SetText(cfg.remotes[0].countryIso + ", " + cfg.remotes[0].country)
 		protoLabel.SetText(string(cfg.proto))
-
+		authCheckbox.Connect("toggled", func() {
+			authBox.SetVisible(authCheckbox.GetActive())
+		})
+		showAuth := cfg.creds.Auth == auth.USER_PASS
+		authCheckbox.SetActive(showAuth)
+		authBox.SetVisible(showAuth)
+		if showAuth {
+			userEntrry.SetText(cfg.creds.Username)
+			passEntry.SetText(cfg.creds.Password)
+		}
+		
 		detailsGrid.SetVisible(true)
 		detailsGrid.ShowAll()
 		pathEntry.SetText(filePath)
